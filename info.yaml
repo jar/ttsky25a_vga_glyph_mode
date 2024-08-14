@@ -1,9 +1,9 @@
 # Tiny Tapeout project information
 project:
-  title:       "VGA Glyph Mode"
+  title:       "Glyph Mode"
   author:      "James Ross"
   discord:     "jar#1709"
-  description: "" # One line description of what your project does
+  description: "Submission for VGA Demoscene"
   language:    "Verilog"
   clock_hz:    25175000
 
