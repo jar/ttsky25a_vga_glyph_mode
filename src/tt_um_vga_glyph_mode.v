@@ -70,8 +70,28 @@ module tt_um_vga_glyph_mode(
 		.out(y_block)
 	);
 
-	wire [4:0] glyph_index = {x_block[2] ^ y_block[0]^counter[0], x_block[0] ^ y_block[1], x_block[1] ^ y_block[2], x_block[4] ^ y_block[3], x_block[3] ^ y_block[4]};
-	wire [5:0] color = RGB[5];
+	wire [4:0] glyph_index = {
+		x_block[2] ^ y_block[0],//^counter[2],
+		x_block[0] ^ y_block[1],
+		x_block[1] ^ y_block[2],
+		x_block[4] ^ y_block[3],
+		x_block[3] ^ y_block[4]
+	};
+
+	wire [1:0] speed  = x_block[1:0];
+	wire [3:0] mask   = x_block[6:3];
+	wire [2:0] period = x_block[4:2];
+
+	wire [6:0] f = counter[9:3] - y_block;
+	wire [3:0] c = period + {1'b0, speed};
+	wire [6:0] d = {3'b000, mask} << c;
+	wire [6:0] e = f & d;
+	wire e1 = e[6] | e[5] | e[4] | e[3] | e[2] | e[1] | e[0];
+	wire [6:0] x = f << speed;
+	wire [2:0] y = x[2:0];
+	wire [2:0] z = y ^ 3'b111;
+
+	wire [5:0] color = e1 ? RGB[0] : RGB[z];
 
 	assign R = video_active ? {color[5] & hl, color[4] & hl} : 2'b00;
 	assign G = video_active ? {color[3] & hl, color[2] & hl} : 2'b00;
@@ -85,6 +105,7 @@ module tt_um_vga_glyph_mode(
 		end
 	end
 
+	// color palette
 	reg [5:0] RGB[0:7];
 	initial begin
 		RGB[0] = 6'b000000;
