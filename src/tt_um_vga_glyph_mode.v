@@ -34,8 +34,11 @@ module tt_um_vga_glyph_mode(
 	assign uio_oe  = 0;
 
 	wire [6:0] x_block = pix_x[9:3];
+	//wire [6:0] x_mix = {x_block[4], x_block[0] ^ x_block[5], x_block[1], x_block[2], x_block[6], x_block[3], x_block[0]};
+	wire [6:0] x_mix = {x_block[3], x_block[1], x_block[4], x_block[1], x_block[6], x_block[2], x_block[0]};
 	wire [2:0] g_x = pix_x[2:0];
-	wire [5:0] y_block;// = y_mem[pix_y[8:2]];
+	wire [5:0] y_block;
+	//wire [5:0] y_mix = {y_block[0], y_block[0] ^ y_block[4], y_block[1], y_block[2], y_block[5], y_block[3]};
 	wire [9:0] g_y9 = pix_y - {y_block, 3'b000} - {1'b0, y_block, 2'b00};
 	wire [3:0] g_y = g_y9[3:0];
 	wire hl;
@@ -43,7 +46,7 @@ module tt_um_vga_glyph_mode(
 	// Suppress unused signals warning
 	wire _unused_ok = &{ena, ui_in, uio_in};
 
-	reg [9:0] counter;
+	reg [10:0] counter;
 
 	// VGA output
 	hvsync_generator hvsync_gen(
@@ -58,7 +61,7 @@ module tt_um_vga_glyph_mode(
 
 	// glyphs
 	glyphs_rom glyphs(
-			.c(glyph_index),
+			.c(glyph_index[4:0]),
 			.y(g_y),
 			.x(g_x),
 			.pixel(hl)
@@ -70,28 +73,37 @@ module tt_um_vga_glyph_mode(
 		.out(y_block)
 	);
 
-	wire [4:0] glyph_index = {
-		x_block[2] ^ y_block[0],//^counter[2],
+	wire [6:0] r = x >> d;
+	wire [6:0] glyph_index = {2'b00,
+		x_block[2] ^ y_block[0],
 		x_block[0] ^ y_block[1],
 		x_block[1] ^ y_block[2],
 		x_block[4] ^ y_block[3],
 		x_block[3] ^ y_block[4]
-	};
+	} + r;
 
-	wire [1:0] speed  = x_block[1:0];
-	wire [3:0] mask   = x_block[6:3];
-	wire [2:0] period = x_block[4:2];
+	wire [1:0] a = x_block[1:0];
+	wire [3:0] b = x_block[5:2];
+	wire [2:0] d = x_block[3:2] + 2'd3;
 
-	wire [6:0] f = counter[9:3] - y_block;
-	wire [3:0] c = period + {1'b0, speed};
-	wire [6:0] d = {3'b000, mask} << c;
-	wire [6:0] e = f & d;
-	wire e1 = e[6] | e[5] | e[4] | e[3] | e[2] | e[1] | e[0];
-	wire [6:0] x = f << speed;
-	wire [2:0] y = x[2:0];
-	wire [2:0] z = y ^ 3'b111;
+	wire s = x_block[0] ^ x_block[1] ^ x_block[2] ^ x_block[3] ^ x_block[4] ^ x_block[5] ^ x_block[6];
+	wire n = x_block[1] ^ x_block[3] ^ x_block[5];
 
-	wire [5:0] color = e1 ? RGB[0] : RGB[z];
+	//wire [6:0] v = (({1'b0, (counter[10:5] << speed[x_block])} >> 2) - y_block - x_mix) >> 1;
+	//wire [6:0] v = ((counter[9:3] << speed[x_block]) - y_block - x_mix) >> 0;
+	wire [6:0] v = (counter[9:3] << s) - y_block - x_mix;
+	//wire [6:0] v = ((counter[9:3] - y_block) << x_mix[1:0]) - x_mix;
+	//wire [6:0] v = counter[9:3] - y_block - x_mix;
+	wire [3:0] c = {2'b00, a} + d;
+	wire [6:0] e = {3'b000, b} << c;
+	wire [6:0] f = v & e;
+	wire f1 = f[6] | f[5] | f[4] | f[3] | f[2] | f[1] | f[0];
+	wire [6:0] x = v >> a;
+	wire [2:0] y = x[2:0] ^ 3'b111;
+
+	wire [5:0] z = (((v[2:0] & 3'b111) == 3'b000) & y == 7) ? 6'b111111 : RGB[y];
+
+	wire [5:0] color = (f1 | n) ? RGB[0] : z;
 
 	assign R = video_active ? {color[5] & hl, color[4] & hl} : 2'b00;
 	assign G = video_active ? {color[3] & hl, color[2] & hl} : 2'b00;
@@ -113,9 +125,96 @@ module tt_um_vga_glyph_mode(
 		RGB[2] = 6'b001000;
 		RGB[3] = 6'b001100;
 		RGB[4] = 6'b011100;
-		RGB[5] = 6'b101101;
-		RGB[6] = 6'b111110;
-		RGB[7] = 6'b111111;
+		//RGB[5] = 6'b101101;
+		//RGB[6] = 6'b111110;
+		//RGB[7] = 6'b111111;
+		RGB[5] = 6'b011100;
+		RGB[6] = 6'b011101;
+		RGB[7] = 6'b101101;
+	end
+
+	reg speed[0:79];
+	initial begin
+		speed[ 0] = 0;
+		speed[ 1] = 1;
+		speed[ 2] = 0;
+		speed[ 3] = 1;
+		speed[ 4] = 0;
+		speed[ 5] = 1;
+		speed[ 6] = 0;
+		speed[ 7] = 1;
+		speed[ 8] = 0;
+		speed[ 9] = 1;
+		speed[10] = 0;
+		speed[11] = 1;
+		speed[12] = 0;
+		speed[13] = 1;
+		speed[14] = 0;
+		speed[15] = 1;
+		speed[16] = 0;
+		speed[17] = 1;
+		speed[18] = 0;
+		speed[19] = 1;
+		speed[20] = 0;
+		speed[21] = 1;
+		speed[22] = 0;
+		speed[23] = 1;
+		speed[24] = 0;
+		speed[25] = 1;
+		speed[26] = 0;
+		speed[27] = 1;
+		speed[28] = 0;
+		speed[29] = 1;
+		speed[30] = 0;
+		speed[31] = 1;
+		speed[32] = 0;
+		speed[33] = 1;
+		speed[34] = 0;
+		speed[35] = 1;
+		speed[36] = 0;
+		speed[37] = 1;
+		speed[38] = 0;
+		speed[39] = 1;
+		speed[40] = 0;
+		speed[41] = 1;
+		speed[42] = 0;
+		speed[43] = 1;
+		speed[44] = 0;
+		speed[45] = 1;
+		speed[46] = 0;
+		speed[47] = 1;
+		speed[48] = 0;
+		speed[49] = 1;
+		speed[50] = 0;
+		speed[51] = 1;
+		speed[52] = 0;
+		speed[53] = 1;
+		speed[54] = 0;
+		speed[55] = 1;
+		speed[56] = 0;
+		speed[57] = 1;
+		speed[58] = 0;
+		speed[59] = 1;
+		speed[60] = 0;
+		speed[61] = 1;
+		speed[62] = 0;
+		speed[63] = 1;
+		speed[64] = 0;
+		speed[65] = 1;
+		speed[66] = 0;
+		speed[67] = 1;
+		speed[68] = 0;
+		speed[69] = 1;
+		speed[70] = 0;
+		speed[71] = 1;
+		speed[72] = 0;
+		speed[73] = 1;
+		speed[74] = 0;
+		speed[75] = 1;
+		speed[76] = 0;
+		speed[77] = 1;
+		speed[78] = 0;
+		speed[79] = 1;
 	end
 
 endmodule
