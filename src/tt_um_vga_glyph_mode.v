@@ -73,14 +73,16 @@ module tt_um_vga_glyph_mode(
 		.out(y_block)
 	);
 
-	wire [6:0] r = x >> d;
+	//wire [10:0] r = (x >> d) & 11'd7;
+	wire [6:0] r = x[6:0] >> d;
 	wire [6:0] glyph_index = {2'b00,
 		x_block[2] ^ y_block[0],
 		x_block[0] ^ y_block[1],
 		x_block[1] ^ y_block[2],
 		x_block[4] ^ y_block[3],
 		x_block[3] ^ y_block[4]
-	} + r;
+	} + r[6:0];
+	//wire [6:0] glyph_index = r;
 
 	wire [1:0] a = x_block[1:0];
 	wire [3:0] b = x_block[5:2];
@@ -92,18 +94,23 @@ module tt_um_vga_glyph_mode(
 	//wire [6:0] v = (({1'b0, (counter[10:5] << speed[x_block])} >> 2) - y_block - x_mix) >> 1;
 	//wire [6:0] v = ((counter[9:3] << speed[x_block]) - y_block - x_mix) >> 0;
 	wire [6:0] v = (counter[9:3] << s) - y_block - x_mix;
+	//wire [7:0] v = (counter[9:2] << s) - {1'b0, y_block} - {1'b0, x_mix};
+	//wire [10:0] v = ((counter[10:0] << s) >> 3) - {5'd0, y_block} - {4'd0, x_mix};
 	//wire [6:0] v = ((counter[9:3] - y_block) << x_mix[1:0]) - x_mix;
 	//wire [6:0] v = counter[9:3] - y_block - x_mix;
 	wire [3:0] c = {2'b00, a} + d;
 	wire [6:0] e = {3'b000, b} << c;
-	wire [6:0] f = v & e;
+	wire [6:0] f = v[6:0] & e;
 	wire f1 = f[6] | f[5] | f[4] | f[3] | f[2] | f[1] | f[0];
+	//wire [10:0] x = v >> a;
 	wire [6:0] x = v >> a;
+	//wire [7:0] x = v >> a;
 	wire [2:0] y = x[2:0] ^ 3'b111;
 
 	wire [5:0] z = (((v[2:0] & 3'b111) == 3'b000) & y == 7) ? 6'b111111 : RGB[y];
 
 	wire [5:0] color = (f1 | n) ? RGB[0] : z;
+	//wire [5:0] color = 6'b111111;
 
 	assign R = video_active ? {color[5] & hl, color[4] & hl} : 2'b00;
 	assign G = video_active ? {color[3] & hl, color[2] & hl} : 2'b00;
@@ -124,13 +131,14 @@ module tt_um_vga_glyph_mode(
 		RGB[1] = 6'b000100;
 		RGB[2] = 6'b001000;
 		RGB[3] = 6'b001100;
-		RGB[4] = 6'b011100;
-		//RGB[5] = 6'b101101;
-		//RGB[6] = 6'b111110;
-		//RGB[7] = 6'b111111;
-		RGB[5] = 6'b011100;
-		RGB[6] = 6'b011101;
-		RGB[7] = 6'b101101;
+		//RGB[4] = 6'b001100;
+		//RGB[5] = 6'b011100;
+		//RGB[6] = 6'b011101;
+		//RGB[7] = 6'b101101;
+		RGB[4] = 6'b001101;
+		RGB[5] = 6'b011101;
+		RGB[6] = 6'b011110;
+		RGB[7] = 6'b101110;
 	end
 
 	reg speed[0:79];
