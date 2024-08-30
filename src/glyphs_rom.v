@@ -8,7 +8,7 @@ module glyphs_rom(
     output wire pixel
 );
 	reg [7:0] g[47:0][11:0];
-	assign pixel = g[(c<48)?c:0][y][x];
+	assign pixel = g[(c<48)?c:c-48][y][x];
 	initial begin
 		g[ 0][ 0] = 8'b00000000;
 		g[ 0][ 1] = 8'b11011000;
