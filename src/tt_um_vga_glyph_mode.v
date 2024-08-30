@@ -32,7 +32,6 @@ module tt_um_vga_glyph_mode(
 	assign uio_oe  = 0;
 
 	wire [6:0] xb = pix_x[9:3];
-	//wire [6:0] x_mix = {xb[4], xb[0] ^ xb[5], xb[1], xb[2], xb[6], xb[3], xb[0]};
 	wire [6:0] x_mix = {xb[3], xb[1], xb[4], xb[1], xb[6], xb[0], xb[2]};
 	wire [2:0] g_x = pix_x[2:0];
 	wire [5:0] yb;
@@ -58,7 +57,7 @@ module tt_um_vga_glyph_mode(
 
 	// glyphs
 	glyphs_rom glyphs(
-			.c(glyph_index[4:0]),
+			.c(glyph_index[5:0]),
 			.y(g_y),
 			.x(g_x),
 			.pixel(hl)
@@ -72,7 +71,8 @@ module tt_um_vga_glyph_mode(
 
 	//wire [10:0] r = (x >> d) & 11'd7;
 	wire [6:0] r = x[6:0] >> d;
-	wire [6:0] glyph_index = {2'b00, xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} + r[6:0];
+	//wire [6:0] glyph_index = {2'b00, xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} + r[6:0];
+	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} + {1'b0, xb[5] ^ yb[5], xb[6] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2]} + r[5:0];
 	//wire [6:0] glyph_index = r;
 
 	wire [1:0] a = xb[1:0];
