@@ -3,8 +3,6 @@
 # Author: Uri Shaked
 
 SRC_DIR = ../src
-#PROJECT_SOURCES = tt_um_vga_glyph_mode.v glyphs_rom.v hvsync_generator.v
-#VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 VERILOG_SOURCES = $(SRC_DIR)/*.v
 TOP_MODULE = tt_um_vga_glyph_mode
 

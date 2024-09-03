@@ -1,68 +1,69 @@
+`ifndef HVSYNC_GENERATOR_H
+`define HVSYNC_GENERATOR_H
+
 /*
- * Copyright (c) 2024 Zachary Catlin
- * SPDX-License-Identifier: Apache-2.0
- */
+Video sync generator, used to drive a VGA monitor.
+Timing from: https://en.wikipedia.org/wiki/Video_Graphics_Array
+To use:
+- Wire the hsync and vsync signals to top level outputs
+- Add a 3-bit (or more) "rgb" output to the top level
+*/
 
-`default_nettype none
+module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
 
-// This intentionally has the same interface as the "hvsync_generator"
-// module in the VGA Playground (https://tinytapeout.github.io/vga-playground/)
-// to make it easy to copy-and-paste code for _in silico_ prototyping.
-module hvsync_generator(
-  input  wire       clk,   // clock, assumed to be ~25.175 or 25.2 MHz
-                           // (for 640x480 pixel, 59.94 or 60 Hz video)
-  input  wire       reset, // reset (active HIGH)
-  output reg        vsync, // VSync
-  output reg        hsync, // HSync
-  output reg  [9:0] hpos,  // horizontal position in frame
-  output reg  [9:0] vpos,  // vertical position in frame
-  output wire       display_on  // are we in the "addressable" part of the frame
-                                // (i.e., the part which actually contains image data)?
-);
+  input clk;
+  input reset;
+  output reg hsync, vsync;
+  output display_on;
+  output reg [9:0] hpos;
+  output reg [9:0] vpos;
 
-// Like other VGA timing modules, we rotate the parts of the line and frame
-// from the depiction in, e.g., VESA standards
-// so as to have (hpos, vpos) == (0, 0) be the first pixel of image data.
+  // declarations for TV-simulator sync parameters
+  // horizontal constants
+  parameter H_DISPLAY       = 640; // horizontal display width
+  parameter H_BACK          =  48; // horizontal left border (back porch)
+  parameter H_FRONT         =  16; // horizontal right border (front porch)
+  parameter H_SYNC          =  96; // horizontal sync width
+  // vertical constants
+  parameter V_DISPLAY       = 480; // vertical display height
+  parameter V_TOP           =  33; // vertical top border
+  parameter V_BOTTOM        =  10; // vertical bottom border
+  parameter V_SYNC          =   2; // vertical sync # lines
+  // derived constants
+  parameter H_SYNC_START    = H_DISPLAY + H_FRONT;
+  parameter H_SYNC_END      = H_DISPLAY + H_FRONT + H_SYNC - 1;
+  parameter H_MAX           = H_DISPLAY + H_BACK + H_FRONT + H_SYNC - 1;
+  parameter V_SYNC_START    = V_DISPLAY + V_BOTTOM;
+  parameter V_SYNC_END      = V_DISPLAY + V_BOTTOM + V_SYNC - 1;
+  parameter V_MAX           = V_DISPLAY + V_TOP + V_BOTTOM + V_SYNC - 1;
 
-// length of the addressable portion of a line (all H lengths in pixels)
-`define H_ADDR 640
-// length of the right border and front porch of a line
-`define H_FRONT 16
-// length of the HSync pulse
-`define H_SYNC 96
-// length of the back porch and left porder of a line
-`define H_BACK 48
-
-// height of the addressible portion of a frame (all V heights in lines)
-`define V_ADDR 480
-// height of the bottom border and front porch of a frame
-`define V_FRONT 10
-// height of the VSync pulse
-`define V_SYNC 2
-// height of the back porch and top border of a frame
-`define V_BACK 33
-
-// For VGA video, VSync and HSync are active-low.
-
-always @(posedge clk) begin
-  if (reset) begin
-    {vsync, hsync} <= 2'b11;
-    hpos <= 10'd0;
-    vpos <= 10'd0;
+  wire hmaxxed = (hpos == H_MAX) || reset;	// set when hpos is maximum
+  wire vmaxxed = (vpos == V_MAX) || reset;	// set when vpos is maximum
+  
+  // horizontal position counter
+  always @(posedge clk)
+  begin
+    hsync <= (hpos>=H_SYNC_START && hpos<=H_SYNC_END);
+    if(hmaxxed)
+      hpos <= 0;
+    else
+      hpos <= hpos + 1;
   end
-  else begin
-    hsync <= ~((hpos >= (`H_ADDR + `H_FRONT)) & (hpos < (`H_ADDR + `H_FRONT + `H_SYNC)));
-    vsync <= ~((vpos >= (`V_ADDR + `V_FRONT)) & (vpos < (`V_ADDR + `V_FRONT + `V_SYNC)));
-    hpos <= (hpos >= (`H_ADDR + `H_FRONT + `H_SYNC + `H_BACK - 1)) ? 10'd0 : hpos + 10'd1;
-    if (hpos >= (`H_ADDR + `H_FRONT + `H_SYNC + `H_BACK - 1)) begin
-      vpos <= (vpos >= (`V_ADDR + `V_FRONT + `V_SYNC + `V_BACK - 1)) ? 10'd0 : vpos + 10'd1;
-    end
+
+  // vertical position counter
+  always @(posedge clk)
+  begin
+    vsync <= (vpos>=V_SYNC_START && vpos<=V_SYNC_END);
+    if(hmaxxed)
+      if (vmaxxed)
+        vpos <= 0;
+      else
+        vpos <= vpos + 1;
   end
-end
-
-wire out_of_h_addr = hpos[9] & |hpos[8:7]; // "hpos >= 640"
-wire out_of_v_addr = vpos[9] | &vpos[8:5]; // "vpos >= 480"
-
-assign display_on = ~(out_of_h_addr | out_of_v_addr);
+  
+  // display_on is set when beam is in "safe" visible frame
+  assign display_on = (hpos<H_DISPLAY) && (vpos<V_DISPLAY);
 
 endmodule
+
+`endif

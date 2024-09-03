@@ -78,10 +78,11 @@ int main(int argc, char **argv) {
 
 	int hnum = 0;
 	int vnum = 0;
-	int polarity = 0;
+	int polarity = 1;
 
 	while (!quit) {
 		int last_ticks = SDL_GetTicks();
+		uint8_t ui_in = 0;
 
 		while (SDL_PollEvent(&e) == 1) {
 			if (e.type == SDL_QUIT) {
@@ -107,14 +108,26 @@ int main(int argc, char **argv) {
 		}
 
 		auto keystate = SDL_GetKeyboardState(NULL);
-		top->rst_n = !keystate[SDL_SCANCODE_R];
+		int rst_n = !keystate[SDL_SCANCODE_R];
+		ui_in |= keystate[SDL_SCANCODE_0] << 0;
+		ui_in |= keystate[SDL_SCANCODE_1] << 1;
+		ui_in |= keystate[SDL_SCANCODE_2] << 2;
+		ui_in |= keystate[SDL_SCANCODE_3] << 3;
+		ui_in |= keystate[SDL_SCANCODE_4] << 4;
+		ui_in |= keystate[SDL_SCANCODE_5] << 5;
+		ui_in |= keystate[SDL_SCANCODE_6] << 6;
+		ui_in |= keystate[SDL_SCANCODE_7] << 7;
 
 		for (int i = 0; i < VGA_FRAME_CYCLES; i++) {
 
 			top->clk = 0;
 			top->eval();
+			if (rst_n == 0) top->rst_n = 0;
+			top->ui_in = ui_in;
 			top->clk = 1;
 			top->eval();
+			if (rst_n == 0) top->rst_n = 1;
+			top->ui_in = ui_in;
 
 			uint8_t uo_out = top->uo_out; // {hsync, b0, g0, r0, vsync, b1, g1, r1}:
 			uint8_t hsync = (uo_out & 0b10000000) >> 7;
