@@ -42,7 +42,7 @@ module tt_um_vga_glyph_mode(
 	// Suppress unused signals warning
 	wire _unused_ok = &{ena, ui_in, uio_in};
 
-	reg [10:0] counter;
+	reg [9:0] counter;
 
 	// VGA output
 	hvsync_generator hvsync_gen(
@@ -57,7 +57,7 @@ module tt_um_vga_glyph_mode(
 
 	// glyphs
 	glyphs_rom glyphs(
-			.c(glyph_index[5:0]),
+			.c(glyph_index),
 			.y(g_y),
 			.x(g_x),
 			.pixel(hl)
@@ -69,11 +69,8 @@ module tt_um_vga_glyph_mode(
 		.out(yb)
 	);
 
-	//wire [10:0] r = (x >> d) & 11'd7;
-	wire [6:0] r = x[6:0] >> d;
-	//wire [6:0] glyph_index = {2'b00, xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} + r[6:0];
+	wire [6:0] r = x[6:0] >> 3;
 	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} + {1'b0, xb[5] ^ yb[5], xb[6] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2]} + r[5:0];
-	//wire [6:0] glyph_index = r;
 
 	wire [1:0] a = xb[1:0];
 	wire [3:0] b = xb[5:2];
@@ -83,20 +80,15 @@ module tt_um_vga_glyph_mode(
 	wire n = xb[1] ^ xb[3] ^ xb[5];
 
 	wire [6:0] v = (counter[9:3] << s) - yb - x_mix;
-	//wire [7:0] v = (counter[9:2] << s) - {1'b0, yb} - {1'b0, x_mix};
-	//wire [10:0] v = ((counter[10:0] << s) >> 3) - {5'd0, yb} - {4'd0, x_mix};
-	//wire [6:0] v = ((counter[9:3] - yb) << x_mix[1:0]) - x_mix;
-	//wire [6:0] v = counter[9:3] - yb - x_mix;
 	wire [3:0] c = {2'b00, a} + d;
 	wire [6:0] e = {3'b000, b} << c;
 	wire [6:0] f = v[6:0] & e;
-	wire [6:0] x = v >> a;
+	wire [6:0] x = v[6:0] >> a;
 	wire [2:0] y = x[2:0] ^ 3'b111;
 
 	wire [5:0] z = (((v[2:0] & 3'b111) == 3'b000) & y == 7) ? 6'b111111 : palette[y];
 
 	wire [5:0] color = ((f != 7'd0) | n) ? palette[0] : z;
-	//wire [5:0] color = 6'b111111;
 
 	assign RGB = (video_active & hl) ? color : palette[0];
 	
