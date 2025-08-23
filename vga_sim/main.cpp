@@ -14,12 +14,12 @@
 #define VGA_HORZ_BACK_PORCH  48
 
 #define VGA_VERT_ACTIVE     480
-#define VGA_VERT_FRONT_PORCH 11
+#define VGA_VERT_FRONT_PORCH 10
 #define VGA_VERT_SYNC_PULSE   2
-#define VGA_VERT_BACK_PORCH  31
+#define VGA_VERT_BACK_PORCH  33
 
 #define VGA_HZ 60
-#define VGA_FRAME_CYCLES ((VGA_HORZ_ACTIVE + VGA_HORZ_FRONT_PORCH + VGA_HORZ_SYNC_PULSE + VGA_HORZ_BACK_PORCH) * (VGA_HORZ_ACTIVE + VGA_HORZ_FRONT_PORCH + VGA_HORZ_SYNC_PULSE + VGA_HORZ_BACK_PORCH))
+#define VGA_FRAME_CYCLES ((VGA_HORZ_ACTIVE + VGA_HORZ_FRONT_PORCH + VGA_HORZ_SYNC_PULSE + VGA_HORZ_BACK_PORCH) * (VGA_VERT_ACTIVE + VGA_VERT_FRONT_PORCH + VGA_VERT_SYNC_PULSE + VGA_VERT_BACK_PORCH))
 
 struct RGB888_t { uint8_t b, g, r, a; } __attribute__((packed));
 
@@ -178,6 +178,7 @@ int main(int argc, char **argv) {
 			std::string fps = "Tiny Tapeout VGA (" + std::to_string((int)1000.0/(ticks - last_ticks)) + " FPS)";
 			SDL_SetWindowTitle(window, fps.c_str());
 		}
+
 	}
 
 	top->final();
