@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 
+#include <unistd.h>
 #include <SDL2/SDL.h>
 
 #include "Vtt_um_vga_glyph_mode.h"
@@ -22,13 +23,25 @@
 #define VGA_FRAME_CYCLES ((VGA_HORZ_ACTIVE + VGA_HORZ_FRONT_PORCH + VGA_HORZ_SYNC_PULSE + VGA_HORZ_BACK_PORCH) * (VGA_VERT_ACTIVE + VGA_VERT_FRONT_PORCH + VGA_VERT_SYNC_PULSE + VGA_VERT_BACK_PORCH))
 
 struct RGB888_t { uint8_t b, g, r, a; } __attribute__((packed));
+union VGApinout_t {
+	uint8_t raw;
+	struct {
+		uint8_t b1    : 1;
+		uint8_t g1    : 1;
+		uint8_t r1    : 1;
+		uint8_t vsync : 1;
+		uint8_t b0    : 1;
+		uint8_t g0    : 1;
+		uint8_t r0    : 1;
+		uint8_t hsync : 1;
+	} __attribute__((packed)) pin;
+};
 
-int main(int argc, char **argv) {
-
-	std::array<RGB888_t, VGA_HORZ_ACTIVE * VGA_VERT_ACTIVE> framebuffer;
+int main(int argc, char **argv)
+{
+	std::array<RGB888_t, VGA_HORZ_ACTIVE * VGA_VERT_ACTIVE> fb;
 
 	Verilated::commandArgs(argc, argv);
-
 	Vtt_um_vga_glyph_mode *top = new Vtt_um_vga_glyph_mode;
 
 	// Reset module
@@ -40,48 +53,29 @@ int main(int argc, char **argv) {
 	top->rst_n = 1;
 
 	SDL_Init(SDL_INIT_VIDEO);
-
-	SDL_Window* window =
-	    SDL_CreateWindow(
-	        "Tiny Tapeout VGA",
-	        SDL_WINDOWPOS_UNDEFINED,
-	        SDL_WINDOWPOS_UNDEFINED,
-	        VGA_HORZ_ACTIVE,
-	        VGA_VERT_ACTIVE,
-	        0
-	    );
-
-	SDL_Renderer* renderer =
-	    SDL_CreateRenderer(
-	        window,
-	        -1,
-	        SDL_RENDERER_ACCELERATED
-	    );
-
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-	SDL_RenderClear(renderer);
-
-	SDL_Event e;
-
-	SDL_Texture* texture =
-	    SDL_CreateTexture(
-	        renderer,
-	        SDL_PIXELFORMAT_ARGB8888,
-	        SDL_TEXTUREACCESS_STREAMING,
-	        VGA_HORZ_ACTIVE,
-	        VGA_VERT_ACTIVE
-	    );
-
-	bool quit = false;
+	SDL_Window* w = SDL_CreateWindow("Tiny Tapeout VGA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, VGA_HORZ_ACTIVE, VGA_VERT_ACTIVE, SDL_WINDOW_RESIZABLE);
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+	SDL_Renderer* r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);// | SDL_RENDERER_PRESENTVSYNC);
+	if (SDL_RenderSetLogicalSize(r, VGA_HORZ_ACTIVE, VGA_VERT_ACTIVE) != 0) {
+		std::cerr << "SDL_RenderSetLogicalSize\n";
+		SDL_Quit();
+		exit(EXIT_FAILURE);
+	}
+	SDL_SetRenderDrawColor(r, 0, 0, 0, SDL_ALPHA_OPAQUE);
+	SDL_RenderClear(r);
+	SDL_Texture* t = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, VGA_HORZ_ACTIVE, VGA_VERT_ACTIVE);
 
 	int hnum = 0;
 	int vnum = 0;
 	int polarity = 1;
+	bool slow = false;
+	bool quit = false;
 
 	while (!quit) {
 		int last_ticks = SDL_GetTicks();
 		uint8_t ui_in = 0;
 
+		SDL_Event e;
 		while (SDL_PollEvent(&e) == 1) {
 			if (e.type == SDL_QUIT) {
 				quit = true;
@@ -92,13 +86,15 @@ int main(int argc, char **argv) {
 						quit = true;
 						break;
 					case SDLK_f:
-						static Uint32 mode = SDL_WINDOW_FULLSCREEN;
-						SDL_SetWindowFullscreen(window, mode);
+						static Uint32 mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
+						SDL_SetWindowFullscreen(w, mode);
 						mode = mode ? 0 : SDL_WINDOW_FULLSCREEN;
 						break;
 					case SDLK_p: // swap VGA sync polarity
 						polarity = polarity ? 0 : 1;
 						break;
+					case SDLK_s: // toggle slow
+						slow = !slow;
 					default:
 						break;
 				}
@@ -127,23 +123,21 @@ int main(int argc, char **argv) {
 			if (rst_n == 0) top->rst_n = 1;
 			top->ui_in = ui_in;
 
-			uint8_t uo_out = top->uo_out; // {hsync, b0, g0, r0, vsync, b1, g1, r1}:
-			uint8_t hsync = (uo_out & 0b10000000) >> 7;
-			uint8_t vsync = (uo_out & 0b00001000) >> 3;
+			VGApinout_t uo_out = {.raw = top->uo_out};
 
 			// h and v blank logic
-			if (hsync == polarity && vsync == polarity) { // XXX Sync polarity positive or negative?
+			if (uo_out.pin.hsync == polarity && uo_out.pin.vsync == polarity) { // XXX Sync polarity positive or negative?
 				hnum = -VGA_HORZ_BACK_PORCH;
-				vnum = -VGA_VERT_BACK_PORCH - VGA_VERT_SYNC_PULSE; // XXX include SYNC_PULSE???
+				vnum = -VGA_VERT_BACK_PORCH;
 			}
 
-			// active frame
+			// active frame, scaling for 6-bit color
 			if ((hnum >= 0) && (hnum < VGA_HORZ_ACTIVE) && (vnum >= 0) && (vnum < VGA_VERT_ACTIVE)) {
-				uint8_t rr = (((uo_out & 0b00000001) << 1) | ((uo_out & 0b00010000) >> 4)) * 85;
-				uint8_t gg = (((uo_out & 0b00000010) << 0) | ((uo_out & 0b00100000) >> 5)) * 85;
-				uint8_t bb = (((uo_out & 0b00000100) >> 1) | ((uo_out & 0b01000000) >> 6)) * 85;
+				uint8_t rr = 85 * (uo_out.pin.r1 << 1 | uo_out.pin.r0);
+				uint8_t gg = 85 * (uo_out.pin.g1 << 1 | uo_out.pin.g0);
+				uint8_t bb = 85 * (uo_out.pin.b1 << 1 | uo_out.pin.b0);
 				RGB888_t rrggbb = { .b = bb, .g = gg, .r = rr };
-				framebuffer[vnum * VGA_HORZ_ACTIVE + hnum] = rrggbb;
+				fb[vnum * VGA_HORZ_ACTIVE + hnum] = rrggbb;
 			}
 
 			// keep track of encountered fields
@@ -155,37 +149,27 @@ int main(int argc, char **argv) {
 
 		}
 
-		SDL_UpdateTexture(
-		    texture,
-		    NULL,
-		    framebuffer.data(),
-		    VGA_HORZ_ACTIVE * sizeof(RGB888_t)
-		);
-
-		SDL_RenderCopy(
-		    renderer,
-		    texture,
-		    NULL,
-		    NULL
-		);
-
-		SDL_RenderPresent(renderer);
+		SDL_RenderClear(r);
+		SDL_UpdateTexture(t, NULL, fb.data(), VGA_HORZ_ACTIVE * sizeof(RGB888_t));
+		SDL_RenderCopy(r, t, NULL, NULL);
+		SDL_RenderPresent(r);
 
 		int ticks = SDL_GetTicks();
 		static int last_update_ticks = 0;
 		if (ticks - last_update_ticks > 1000) {
 			last_update_ticks = ticks;
 			std::string fps = "Tiny Tapeout VGA (" + std::to_string((int)1000.0/(ticks - last_ticks)) + " FPS)";
-			SDL_SetWindowTitle(window, fps.c_str());
+			SDL_SetWindowTitle(w, fps.c_str());
 		}
+		if (slow) usleep(500000);
 
 	}
 
 	top->final();
 	delete top;
 
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
+	SDL_DestroyRenderer(r);
+	SDL_DestroyWindow(w);
 	SDL_Quit();
 
 	return EXIT_SUCCESS;
