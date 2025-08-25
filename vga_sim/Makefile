@@ -7,8 +7,8 @@ VERILOG_SOURCES = $(SRC_DIR)/*.v
 TOP_MODULE = tt_um_vga_glyph_mode
 
 VFLAGS = --x-assign fast --x-initial fast --noassert 
-CFLAGS = -O3 -march=native -Iobj_dir -I/usr/share/verilator/include
-LDFLAGS = -lSDL2
+CFLAGS = -flto -O3 -march=native -Iobj_dir -I/usr/share/verilator/include
+LDFLAGS = -flto -lSDL2
 
 all: obj_dir/V$(TOP_MODULE).h
 	make -C obj_dir -f V$(TOP_MODULE).mk
