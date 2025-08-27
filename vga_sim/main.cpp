@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 		uint8_t ui_in = 0;
 
 		SDL_Event e;
-		while (SDL_PollEvent(&e) == 1) {
+		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT) {
 				quit = true;
 			} else if (e.type == SDL_KEYDOWN) {
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 					case SDLK_f:
 						static Uint32 mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
 						SDL_SetWindowFullscreen(w, mode);
-						mode = mode ? 0 : SDL_WINDOW_FULLSCREEN;
+						mode = mode ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
 						break;
 					case SDLK_p: // toggle VGA sync polarity
 						polarity = !polarity;
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 		ui_in |= k[SDL_SCANCODE_6] << 6;
 		ui_in |= k[SDL_SCANCODE_7] << 7;
 
-		for (int i = 0; i < vga.frame_cycles(); i++) {
+		for (int cycle = 0; cycle < vga.frame_cycles(); cycle++) {
 			// set inputs and tick-tock
 			top->clk = 0;
 			top->eval();
@@ -104,9 +104,9 @@ int main(int argc, char **argv)
 
 			VGApinout_t uo_out{top->uo_out};
 
-			// h and v blank logic
+			// h and v blank/sync logic
 			bool sync = uo_out.hsync == vga.horz_sync_pol && uo_out.vsync == vga.vert_sync_pol;
-			if (sync || (!sync && polarity)) { // XXX Sync polarity positive or negative?
+			if (sync || (!sync && polarity)) {
 				hnum = -vga.horz_back_porch;
 				vnum = -vga.vert_back_porch;
 			}

@@ -66,7 +66,6 @@ constexpr std::array<vga_timing, VGA_NUM_FORMAT> vga_timings = {{
 	[  VGA_640_400_85] = { 31.500,  640,  32,  64,  96, VGA_SYNC_NEG,  400,  1, 3, 41, VGA_SYNC_POS},
 	[  VGA_720_400_85] = { 35.500,  720,  36,  72, 108, VGA_SYNC_NEG,  400,  1, 3, 42, VGA_SYNC_POS},
 	[  VGA_640_480_60] = { 25.175,  640,  16,  96,  48, VGA_SYNC_NEG,  480, 10, 2, 33, VGA_SYNC_NEG},
-	//[  VGA_640_480_60] = { 25.175,  640,  16,  96,  48, VGA_SYNC_POS,  480, 10, 2, 33, VGA_SYNC_POS},
 	[  VGA_640_480_72] = { 31.500,  640,  24,  40, 128, VGA_SYNC_NEG,  480,  9, 2, 29, VGA_SYNC_POS},
 	[  VGA_640_480_75] = { 31.500,  640,  16,  64, 120, VGA_SYNC_NEG,  480,  1, 3, 16, VGA_SYNC_NEG},
 	[  VGA_640_480_85] = { 36.000,  640,  56,  56,  80, VGA_SYNC_NEG,  480,  1, 3, 25, VGA_SYNC_NEG},
