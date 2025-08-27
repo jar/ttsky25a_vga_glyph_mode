@@ -1,11 +1,18 @@
+/*
+ * Copyright (c) 2025 James Ross
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 `ifndef GLYPHS_ROM_H
 `define GLYPHS_ROM_H
 
+`default_nettype none
+
 module glyphs_rom(
-    input wire [5:0] c,
-    input wire [3:0] y,
-	input wire [2:0] x,
-    output wire pixel
+	input  wire [5:0] c,
+	input  wire [3:0] y,
+	input  wire [2:0] x,
+	output wire pixel
 );
 	reg [7:0] g[47:0][11:0];
 	assign pixel = g[(c<48)?c:c-48][y][x];
