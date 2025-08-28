@@ -74,7 +74,7 @@ module tt_um_vga_glyph_mode(
 	);
 
 	// division by 3
-	div3_rom div3(
+	div3 div3(
 		.in(pix_y[8:2]),
 		.out(yb)
 	);
