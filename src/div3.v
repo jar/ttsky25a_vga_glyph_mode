@@ -1,8 +1,6 @@
 `ifndef DIV3_ROM_H
 `define DIV3_ROM_H
 
-`timescale 1ns / 1ps
-
 // Division-by-3
 
 module div3 (
