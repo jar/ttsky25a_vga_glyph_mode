@@ -44,6 +44,7 @@ module tt_um_vga_glyph_mode(
 	wire _unused_ok = &{ena, ui_in[7:2], uio_in};
 
 	reg [9:0] counter;
+	reg rst_drop;
 
 	// VGA output
 	hvsync_generator hvsync_gen(
@@ -65,12 +66,11 @@ module tt_um_vga_glyph_mode(
 	);
 
 	// palette
-	wire [5:0] glyph_color;
+	wire [5:0] palette_color;
 	palette_rom palettes(
 		.cid(y),
 		.pid(ui_in[1:0]),
-		//.pid(2'b00),
-		.color(glyph_color)
+		.color(palette_color)
 	);
 
 	// division by 3
@@ -102,18 +102,25 @@ module tt_um_vga_glyph_mode(
 	wire [6:0] x = v >> a;
 	wire [2:0] y = ~x[2:0];
 	wire [5:0] black = 6'b000000;
+	wire [9:0] drop = s ? {2'd0, yb, 2'd0} : {1'b0, yb, 3'd0};
+	wire drop_bit = ({3'd0, x_mix} + drop > counter) & ~rst_drop;
+	wire [5:0] glyph_color = drop_bit ? black : palette_color;
 	wire [5:0] white = 6'b111111;
 
 	wire [5:0] z = ((v[2:0] == 3'b000) & y == 7) ? white : glyph_color;
 
-	wire [5:0] color = ((f != 7'd0) | n) ? black : z;
+	wire [5:0] color = ((f != 7'd0) | n | drop_bit) ? black : z;
 
 	assign RGB = (video_active & hl) ? color : black;
 	
-	always @(posedge vsync) begin
+	always @(posedge vsync, negedge rst_n) begin
 		if (~rst_n) begin
+			rst_drop <= 0;
 			counter <= 0;
 		end else begin
+			if (counter == 10'd1023) begin
+				rst_drop <= 1;
+			end
 			counter <= counter + 1;
 		end
 	end
