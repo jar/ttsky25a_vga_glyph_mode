@@ -1,5 +1,3 @@
-`ifndef HVSYNC_GENERATOR_H
-`define HVSYNC_GENERATOR_H
 `define VGA_640_480_60
 
 // Video sync generator, used to drive a VGA monitor.
@@ -82,5 +80,3 @@ module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
 	assign display_on = (hpos < H_ACTIVE_PIXELS) && (vpos < V_ACTIVE_LINES);
 
 endmodule
-
-`endif

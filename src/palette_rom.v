@@ -3,9 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-`ifndef PALETTE_ROM_H
-`define PALETTE_ROM_H
-
 `default_nettype none
 
 module palette_rom(
@@ -51,5 +48,3 @@ module palette_rom(
 		palette[3][7] = 6'b110011;
 	end
 endmodule
-
-`endif
