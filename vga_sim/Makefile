@@ -6,7 +6,7 @@ SRC_DIR = ../src
 VERILOG_SOURCES = $(SRC_DIR)/*.v
 TOP_MODULE = tt_um_vga_glyph_mode
 
-VFLAGS = --x-assign fast --x-initial fast --noassert 
+VFLAGS = -Wall --x-assign fast --x-initial fast --noassert
 CFLAGS = -flto -O3 -march=native -Iobj_dir -I/usr/share/verilator/include
 LDFLAGS = -flto -lSDL2
 
