@@ -1,20 +1,19 @@
-<!---
-
-This file is used to generate your project datasheet. Please fill in the information below and delete any unused
-sections.
-
-You can also include images in this folder and reference them in the markdown. Each image must be less than
-512 kb in size, and the combined size of all images must be less than 1 MB.
--->
-
 ## How it works
 
-Explain how your project works
+This is a standalone VGA demo that runs with or without input.  It will accept
+two pins `ui_io[0]` and `ui_io[1]` for palette color selection:
+
+| `ui_io[1:0]` | Palette         |
+|-------------:|:----------------|
+|            0 | Green (default) |
+|            1 | Red             |
+|            2 | Blue            |
+|            3 | Pride           |
 
 ## How to test
 
-Explain how to use your project
+Plug into a VGA monitor and select this circuit to test
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+Requires the [TinyVGA PMOD](https://github.com/mole99/tiny-vga)
