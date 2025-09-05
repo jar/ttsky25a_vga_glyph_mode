@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 James Ross
+ * Copyright (c) 2024-2025 James Ross
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -76,32 +76,35 @@ module tt_um_vga_glyph_mode(
 	// division by 3
 	div3 div3(
 		.in(pix_y[8:2]),
-		.out(yb)
+		.out(yb) // yb value is row / 12
 	);
 
-	// there are 48 glyphs [0,47], so we compute a value in that range
+	// there are 51 glyphs
 	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} // [0,31]
 		+ {1'b0, xb[5] ^ yb[5], xb[6] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2]} // [0,15]
-		+ {2'b00, x[6:3]}; // [0,7]
+		+ {1'b0, x[6:3]} // [0,15]
+		+ {1'b0, t & counter[7], t & counter[6], t & counter[5], t & counter[4] & s}; // [0,15]
 
 	wire [1:0] a = xb[1:0];
 	wire [3:0] b = xb[5:2];
 	wire [2:0] d = xb[3:2] + 2'd3;
 
-	// column features
-	wire s = xb[0] ^ xb[1] ^ xb[2] ^ xb[3] ^ xb[4] ^ xb[5] ^ xb[6]; // speed
-	wire n = xb[1] ^ xb[3] ^ xb[5]; // on or off
+	wire t = (xb[0] ^ yb[2] ^ counter[7]) & (xb[1] ^ yb[1] ^ counter[8]) & (xb[2] ^ yb[3] ^ counter[9]) & (xb[3] ^ yb[0]); // toggle glyph
 
-	wire [6:0] v = (counter[9:3] << s) - yb - x_mix;
-	wire [3:0] c = {2'b00, a} + d;
+	// column features
+	wire s = xb[0] ^ xb[1] ^ xb[2] ^ xb[3] ^ xb[4] ^ xb[5] ^ xb[6]; // speed of rain
+	wire n = xb[1] ^ xb[3] ^ xb[5]; // lit on or off
+
+	wire [6:0] v = (s ? counter[8:2] : counter[9:3]) - yb - x_mix;
+	wire [3:0] c = {1'b0, a} + d;
 	wire [6:0] e = {3'b000, b} << c;
 	wire [6:0] f = v & e;
 	wire [6:0] x = v >> a;
-	wire [2:0] y = x[2:0] ^ 3'b111;
+	wire [2:0] y = ~x[2:0];
 	wire [5:0] black = 6'b000000;
 	wire [5:0] white = 6'b111111;
 
-	wire [5:0] z = (((v[2:0] & 3'b111) == 3'b000) & y == 7) ? white : glyph_color;
+	wire [5:0] z = ((v[2:0] == 3'b000) & y == 7) ? white : glyph_color;
 
 	wire [5:0] color = ((f != 7'd0) | n) ? black : z;
 
