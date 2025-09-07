@@ -73,11 +73,8 @@ module tt_um_vga_glyph_mode(
 		.color(palette_color)
 	);
 
-	// division by 3
-	div3 div3(
-		.in(pix_y[8:2]),
-		.out(yb) // yb value is row / 12
-	);
+	wire _unused;
+	assign {_unused, yb} = pix_y[8:2] / 7'd3;
 
 	// there are 51 glyphs
 	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} // [0,31]
