@@ -43,7 +43,7 @@ module tt_um_vga_glyph_mode(
 	// Suppress unused signals warning
 	wire _unused_ok = &{ena, ui_in[7:2], uio_in};
 
-	reg [9:0] counter;
+	reg [9:0] frame;
 	reg rst_drop;
 
 	// VGA output
@@ -83,19 +83,19 @@ module tt_um_vga_glyph_mode(
 	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} // [0,31]
 		+ {1'b0, xb[5] ^ yb[5], xb[6] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2]} // [0,15]
 		+ {1'b0, x[6:3]} // [0,15]
-		+ {1'b0, t & counter[7], t & counter[6], t & counter[5], t & counter[4] & s}; // [0,15]
+		+ {1'b0, t & frame[7], t & frame[6], t & frame[5], t & frame[4] & s}; // [0,15]
 
 	wire [1:0] a = xb[1:0];
 	wire [3:0] b = xb[5:2];
 	wire [2:0] d = xb[3:2] + 2'd3;
 
-	wire t = (xb[0] ^ yb[2] ^ counter[7]) & (xb[1] ^ yb[1] ^ counter[8]) & (xb[2] ^ yb[3] ^ counter[9]) & (xb[3] ^ yb[0]); // toggle glyph
+	wire t = (xb[0] ^ yb[2] ^ frame[7]) & (xb[1] ^ yb[1] ^ frame[8]) & (xb[2] ^ yb[3] ^ frame[9]) & (xb[3] ^ yb[0]); // toggle glyph
 
 	// column features
 	wire s = xb[0] ^ xb[1] ^ xb[2] ^ xb[3] ^ xb[4] ^ xb[5] ^ xb[6]; // speed of rain
 	wire n = xb[1] ^ xb[3] ^ xb[5]; // lit on or off
 
-	wire [6:0] v = (s ? counter[8:2] : counter[9:3]) - yb - x_mix;
+	wire [6:0] v = (s ? frame[8:2] : frame[9:3]) - yb - x_mix;
 	wire [3:0] c = {1'b0, a} + d;
 	wire [6:0] e = {3'b000, b} << c;
 	wire [6:0] f = v & e;
@@ -103,7 +103,7 @@ module tt_um_vga_glyph_mode(
 	wire [2:0] y = ~x[2:0];
 	wire [5:0] black = 6'b000000;
 	wire [9:0] drop = s ? {2'd0, yb, 2'd0} : {1'b0, yb, 3'd0};
-	wire drop_bit = ({3'd0, x_mix} + drop > counter) & ~rst_drop;
+	wire drop_bit = ({3'd0, x_mix} + drop > frame) & ~rst_drop;
 	wire [5:0] glyph_color = drop_bit ? black : palette_color;
 	wire [5:0] white = 6'b111111;
 
@@ -112,16 +112,16 @@ module tt_um_vga_glyph_mode(
 	wire [5:0] color = ((f != 7'd0) | n | drop_bit) ? black : z;
 
 	assign RGB = (video_active & hl) ? color : black;
-	
+
 	always @(posedge vsync, negedge rst_n) begin
 		if (~rst_n) begin
 			rst_drop <= 0;
-			counter <= 0;
+			frame <= 0;
 		end else begin
-			if (counter == 10'd1023) begin
+			if (frame == 10'd1023) begin
 				rst_drop <= 1;
 			end
-			counter <= counter + 1;
+			frame <= frame + 1;
 		end
 	end
 
