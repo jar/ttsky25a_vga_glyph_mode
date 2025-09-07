@@ -7,6 +7,7 @@
 #include "Vtt_um_vga_glyph_mode.h"
 #include "verilated.h"
 #include "vga_timings.hpp"
+#include "gif.h"
 
 struct RGB888_t { uint8_t b, g, r, a; } __attribute__((packed));
 union VGApinout_t {
@@ -25,20 +26,48 @@ union VGApinout_t {
 
 int main(int argc, char **argv)
 {
-	int hnum = 0;
-	int vnum = 0;
+	// Command line options
+	static Uint32 fullscreen = 0;
 	bool polarity = false;
 	bool slow = false;
-	bool quit = false;
-	bool rst_init = false;
+	bool gif = false;
+
+	for (int i = 1; i < argc; i++) {
+		char* p = argv[i];
+		if (!strcmp("--fullscreen", p)) fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
+		else if (!strcmp("--polarity", p)) polarity = !polarity;
+		else if (!strcmp("--slow", p)) slow = !slow;
+		else if (!strcmp("--gif", p)) gif = !gif;
+		else {
+			printf("Use arguments:\n");
+			printf("\t--fullscreen\tToggles SDL window size (default: %s)\n", fullscreen ? "maximized" : "minimized");
+			printf("\t--polarity  \tToggles the VGA polarity sync high/low (default: %s)\n", polarity ? "true" : "false");
+			printf("\t--slow      \tToggles the displayed frame rate (default: %s)\n", slow ? "true" : "false");
+			printf("\t--gif       \tSaves animated GIF (default: %s)\n", gif ? "true" : "false");
+			return 0;
+		}
+	}
+
+	// Select the VGA timings from the list
 	constexpr vga_timing vga = vga_timings[VGA_640_480_60];
-	std::array<RGB888_t, vga.horz_active_frame * vga.vert_active_frame> fb;
+	std::array<RGB888_t, vga.horz_active_frame * vga.vert_active_frame> fb{};
+
+	// GIF output
+	GifWriter g;
+	float frame_time = vga.frame_cycles() / (vga.clock_mhz * 1000.);
+	int delay = ceil(frame_time / 10.f);
+	if (!delay) delay = 1;
+	if (gif) {
+		printf("frame_time = %f ms (rounded up to nearest 100th second = %d)\n", frame_time, delay);
+		GifBegin(&g, "output.gif", vga.horz_active_frame, vga.vert_active_frame, delay);
+		GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
+	}
 
 	Verilated::commandArgs(argc, argv);
 	Vtt_um_vga_glyph_mode *top = new Vtt_um_vga_glyph_mode;
 
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window* w = SDL_CreateWindow("Tiny Tapeout VGA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vga.horz_active_frame, vga.vert_active_frame, SDL_WINDOW_RESIZABLE);
+	SDL_Window* w = SDL_CreateWindow("Tiny Tapeout VGA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vga.horz_active_frame, vga.vert_active_frame, SDL_WINDOW_RESIZABLE | fullscreen);
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
 	SDL_Renderer* r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);// | SDL_RENDERER_PRESENTVSYNC);
 	if (SDL_RenderSetLogicalSize(r, vga.horz_active_frame, vga.vert_active_frame)) {
@@ -49,7 +78,10 @@ int main(int argc, char **argv)
 	SDL_RenderClear(r);
 	SDL_Texture* t = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, vga.horz_active_frame, vga.vert_active_frame);
 
+	// Main single frame loop
+	bool quit = false;
 	while (!quit) {
+		static int frame = 0;
 		int last_ticks = SDL_GetTicks();
 		uint8_t ui_in = 0;
 
@@ -63,10 +95,9 @@ int main(int argc, char **argv)
 					case SDLK_q:
 						quit = true;
 						break;
-					case SDLK_f:
-						static Uint32 mode = SDL_WINDOW_FULLSCREEN_DESKTOP;
-						SDL_SetWindowFullscreen(w, mode);
-						mode = mode ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
+					case SDLK_f: // toggle fullscreen window
+						fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
+						SDL_SetWindowFullscreen(w, fullscreen);
 						break;
 					case SDLK_p: // toggle VGA sync polarity
 						polarity = !polarity;
@@ -81,6 +112,7 @@ int main(int argc, char **argv)
 
 		auto k = SDL_GetKeyboardState(NULL);
 		auto rst_n = k[SDL_SCANCODE_R];
+		static bool rst_init = false;
 		if (!rst_init) { rst_n = rst_init = true; } // reset on first clock cycle
 		ui_in |= k[SDL_SCANCODE_0] << 0;
 		ui_in |= k[SDL_SCANCODE_1] << 1;
@@ -91,6 +123,9 @@ int main(int argc, char **argv)
 		ui_in |= k[SDL_SCANCODE_6] << 6;
 		ui_in |= k[SDL_SCANCODE_7] << 7;
 
+		static int hnum = 0;
+		static int vnum = 0;
+		// Intra-frame verilator cycles
 		for (int cycle = 0; cycle < vga.frame_cycles(); cycle++) {
 			// set inputs and tick-tock
 			top->clk = 0;
@@ -140,9 +175,16 @@ int main(int argc, char **argv)
 			std::string fps = "Tiny Tapeout VGA (" + std::to_string((int)1000.0/(ticks - last_ticks)) + " FPS)";
 			SDL_SetWindowTitle(w, fps.c_str());
 		}
-		if (slow) usleep(500000);
+		if (gif) {
+			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
+			frame++;
+			if (frame > 1023) quit = true;
+		}
+		if (slow) usleep(250000); // ~4 fps
 
 	}
+
+	if (gif) GifEnd(&g);
 
 	top->final();
 	delete top;
