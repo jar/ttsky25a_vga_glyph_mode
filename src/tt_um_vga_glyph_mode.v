@@ -73,11 +73,8 @@ module tt_um_vga_glyph_mode(
 		.color(color)
 	);
 
-	// division by 3
-	div3 div3(
-		.in(vpos[8:2]),
-		.out(yb) // yb value is row / 12
-	);
+	wire [3:0] _unused;
+	assign {_unused, yb} = vpos / 10'd12;
 
 	// there are 51 glyphs
 	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} // [0,31]
@@ -108,9 +105,9 @@ module tt_um_vga_glyph_mode(
 
 	wire [5:0] z = ((v[2:0] == 3'b000) & y == 7) ? white : glyph_color;
 
-	wire [5:0] color = ((f != 7'd0) | n | drop_bit) ? '0 : z;
+	wire [5:0] output_color = ((f != 7'd0) | n | drop_bit) ? '0 : z;
 
-	assign RGB = (display_on & hl) ? color : '0;
+	assign RGB = (display_on & hl) ? output_color : '0;
 
 	always @(posedge vsync, negedge rst_n) begin
 		if (~rst_n) begin
