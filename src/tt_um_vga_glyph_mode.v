@@ -20,9 +20,9 @@ module tt_um_vga_glyph_mode(
 	wire hsync;
 	wire vsync;
 	wire [5:0] RGB;
-	wire video_active;
-	wire [9:0] pix_x;
-	wire [9:0] pix_y;
+	wire display_on;
+	wire [9:0] hpos;
+	wire [9:0] vpos;
 
 	// TinyVGA PMOD
 	assign uo_out = {hsync, RGB[0], RGB[2], RGB[4], vsync, RGB[1], RGB[3], RGB[5]};
@@ -31,13 +31,13 @@ module tt_um_vga_glyph_mode(
 	assign uio_out = 0;
 	assign uio_oe  = 0;
 
-	wire [6:0] xb = pix_x[9:3];
+	wire [6:0] xb = hpos[9:3];
 	wire [6:0] x_mix = {xb[3], xb[1], xb[4], xb[1], xb[6], xb[0], xb[2]};
-	wire [2:0] g_x = pix_x[2:0];
+	wire [2:0] g_x = hpos[2:0];
 	wire [5:0] yb;
 	wire [5:0] g_unused;
 	wire [3:0] g_y;
-	assign {g_unused, g_y} = pix_y - {yb, 3'b000} - {1'b0, yb, 2'b00};
+	assign {g_unused, g_y} = vpos - {yb, 3'b000} - {1'b0, yb, 2'b00};
 	wire hl;
 
 	// Suppress unused signals warning
@@ -52,9 +52,9 @@ module tt_um_vga_glyph_mode(
 		.reset(~rst_n),
 		.hsync(hsync),
 		.vsync(vsync),
-		.display_on(video_active),
-		.hpos(pix_x),
-		.vpos(pix_y)
+		.display_on(display_on),
+		.hpos(hpos),
+		.vpos(vpos)
 	);
 
 	// glyphs
@@ -66,16 +66,16 @@ module tt_um_vga_glyph_mode(
 	);
 
 	// palette
-	wire [5:0] palette_color;
+	wire [5:0] color;
 	palette_rom palettes(
 		.cid(y),
 		.pid(ui_in[1:0]),
-		.color(palette_color)
+		.color(color)
 	);
 
 	// division by 3
 	div3 div3(
-		.in(pix_y[8:2]),
+		.in(vpos[8:2]),
 		.out(yb) // yb value is row / 12
 	);
 
@@ -89,10 +89,10 @@ module tt_um_vga_glyph_mode(
 	wire [3:0] b = xb[5:2];
 	wire [2:0] d = xb[3:2] + 2'd3;
 
-	wire t = (xb[0] ^ yb[2] ^ frame[7]) & (xb[1] ^ yb[1] ^ frame[8]) & (xb[2] ^ yb[3] ^ frame[9]) & (xb[3] ^ yb[0]); // toggle glyph
+	wire t = &{xb[0] ^ yb[2] ^ frame[7], xb[1] ^ yb[1] ^ frame[8], xb[2] ^ yb[3] ^ frame[9], xb[3] ^ yb[0]}; // toggle glyph
 
 	// column features
-	wire s = xb[0] ^ xb[1] ^ xb[2] ^ xb[3] ^ xb[4] ^ xb[5] ^ xb[6]; // speed of rain
+	wire s = ^xb[6:0]; // speed of rain
 	wire n = xb[1] ^ xb[3] ^ xb[5]; // lit on or off
 
 	wire [6:0] v = (s ? frame[8:2] : frame[9:3]) - yb - x_mix;
@@ -101,24 +101,23 @@ module tt_um_vga_glyph_mode(
 	wire [6:0] f = v & e;
 	wire [6:0] x = v >> a;
 	wire [2:0] y = ~x[2:0];
-	wire [5:0] black = 6'b000000;
 	wire [9:0] drop = s ? {2'd0, yb, 2'd0} : {1'b0, yb, 3'd0};
 	wire drop_bit = ({3'd0, x_mix} + drop > frame) & ~rst_drop;
-	wire [5:0] glyph_color = drop_bit ? black : palette_color;
+	wire [5:0] glyph_color = drop_bit ? '0 : color;
 	wire [5:0] white = 6'b111111;
 
 	wire [5:0] z = ((v[2:0] == 3'b000) & y == 7) ? white : glyph_color;
 
-	wire [5:0] color = ((f != 7'd0) | n | drop_bit) ? black : z;
+	wire [5:0] color = ((f != 7'd0) | n | drop_bit) ? '0 : z;
 
-	assign RGB = (video_active & hl) ? color : black;
+	assign RGB = (display_on & hl) ? color : '0;
 
 	always @(posedge vsync, negedge rst_n) begin
 		if (~rst_n) begin
 			rst_drop <= 0;
 			frame <= 0;
 		end else begin
-			if (frame == 10'd1023) begin
+			if (&frame) begin
 				rst_drop <= 1;
 			end
 			frame <= frame + 1;
