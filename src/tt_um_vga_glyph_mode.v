@@ -17,12 +17,8 @@ module tt_um_vga_glyph_mode(
 );
 
 	// VGA signals
-	wire hsync;
-	wire vsync;
-	wire [5:0] RGB;
-	wire display_on;
-	wire [9:0] hpos;
-	wire [9:0] vpos;
+	wire hsync, vsync, display_on;
+	wire [9:0] hpos, vpos;
 
 	// TinyVGA PMOD
 	assign uo_out = {hsync, RGB[0], RGB[2], RGB[4], vsync, RGB[1], RGB[3], RGB[5]};
@@ -35,6 +31,8 @@ module tt_um_vga_glyph_mode(
 	wire [6:0] x_mix = {xb[3], xb[1], xb[4], xb[1], xb[6], xb[0], xb[2]};
 	wire [2:0] g_x = hpos[2:0];
 	wire [5:0] yb;
+	wire [3:0] _unused;
+	assign {_unused, yb} = vpos / 10'd12;
 	wire [5:0] g_unused;
 	wire [3:0] g_y;
 	assign {g_unused, g_y} = vpos - {yb, 3'b000} - {1'b0, yb, 2'b00};
@@ -73,9 +71,6 @@ module tt_um_vga_glyph_mode(
 		.color(color)
 	);
 
-	wire [3:0] _unused;
-	assign {_unused, yb} = vpos / 10'd12;
-
 	// there are 51 glyphs
 	wire [5:0] glyph_index = {xb[2] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2], xb[4] ^ yb[3], xb[3] ^ yb[4]} // [0,31]
 		+ {1'b0, xb[5] ^ yb[5], xb[6] ^ yb[0], xb[0] ^ yb[1], xb[1] ^ yb[2]} // [0,15]
@@ -98,16 +93,13 @@ module tt_um_vga_glyph_mode(
 	wire [6:0] f = v & e;
 	wire [6:0] x = v >> a;
 	wire [2:0] y = ~x[2:0];
-	wire [9:0] drop = s ? {2'd0, yb, 2'd0} : {1'b0, yb, 3'd0};
+	wire [9:0] drop = {1'b0, yb, 3'd0} >> s;
 	wire drop_bit = ({3'd0, x_mix} + drop > frame) & ~rst_drop;
-	wire [5:0] glyph_color = drop_bit ? '0 : color;
-	wire [5:0] white = 6'b111111;
+	wire [5:0] glyph_color = {6{drop_bit}} ^ color;
 
-	wire [5:0] z = ((v[2:0] == 3'b000) & y == 7) ? white : glyph_color;
+	wire [5:0] z = (&~v[2:0] & &y) ? '1 : glyph_color;
 
-	wire [5:0] output_color = ((f != 7'd0) | n | drop_bit) ? '0 : z;
-
-	assign RGB = (display_on & hl) ? output_color : '0;
+	wire [5:0] RGB = (display_on & hl & ~(|f | n | drop_bit)) ? z : '0;
 
 	always @(posedge vsync, negedge rst_n) begin
 		if (~rst_n) begin
