@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2024, Tiny Tapeout LTD
-# Author: Uri Shaked
+# Authors: Uri Shaked, James Ross
 
 SRC_DIR = ../src
 VERILOG_SOURCES = $(SRC_DIR)/*.v
@@ -22,9 +22,13 @@ lint: $(VERILOG_SOURCES)
 sim: all
 	obj_dir/V$(TOP_MODULE)
 
+gif: all
+	obj_dir/V$(TOP_MODULE) --gif 1024
+
 clean:
 	rm -rf obj_dir
+	rm -f output.gif
 
 distclean: clean
 
-.PHONY: all lint sim clean distclean
+.PHONY: all lint sim gif clean distclean

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <cstdint>
+#include <climits>
 
 #include <SDL2/SDL.h>
 
@@ -31,19 +32,23 @@ int main(int argc, char **argv)
 	bool polarity = false;
 	bool slow = false;
 	bool gif = false;
+	int gif_frames = INT_MAX;
 
 	for (int i = 1; i < argc; i++) {
 		char* p = argv[i];
 		if (!strcmp("--fullscreen", p)) fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
 		else if (!strcmp("--polarity", p)) polarity = !polarity;
 		else if (!strcmp("--slow", p)) slow = !slow;
-		else if (!strcmp("--gif", p)) gif = !gif;
-		else {
-			printf("Use arguments:\n");
-			printf("\t--fullscreen\tToggles SDL window size (default: %s)\n", fullscreen ? "maximized" : "minimized");
-			printf("\t--polarity  \tToggles the VGA polarity sync high/low (default: %s)\n", polarity ? "true" : "false");
-			printf("\t--slow      \tToggles the displayed frame rate (default: %s)\n", slow ? "true" : "false");
-			printf("\t--gif       \tSaves animated GIF (default: %s)\n", gif ? "true" : "false");
+		else if (!strcmp("--gif", p)) {
+			gif = !gif;
+			if (i + 1 < argc) gif_frames = atoi(argv[++i]);
+		} else {
+			printf("Command Line   | [Keyboard]\n");
+			printf("  --fullscreen | [F]\tToggles SDL window size (default: %s)\n", fullscreen ? "maximized" : "minimized");
+			printf("  --polarity   | [P]\tToggles the VGA polarity sync high/low (default: %s)\n", polarity ? "true" : "false");
+			printf("  --slow       | [S]\tToggles the displayed frame rate (default: %s)\n", slow ? "true" : "false");
+			printf("  --gif [#]         \tSaves animated GIF (default: %s [%d])\n", gif ? "true" : "false", gif_frames);
+			printf("               | [Q]\tQuits/Escapes (stops GIF if enabled).\n");
 			return 0;
 		}
 	}
@@ -60,7 +65,6 @@ int main(int argc, char **argv)
 	if (gif) {
 		printf("frame_time = %f ms (rounded up to nearest 100th second = %d)\n", frame_time, delay);
 		GifBegin(&g, "output.gif", vga.horz_active_frame, vga.vert_active_frame, delay);
-		GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
 	}
 
 	Verilated::commandArgs(argc, argv);
@@ -178,7 +182,7 @@ int main(int argc, char **argv)
 		if (gif) {
 			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
 			frame++;
-			if (frame > 1023) quit = true;
+			if (frame == gif_frames) quit = true;
 		}
 		if (slow) usleep(250000); // ~4 fps
 
