@@ -29,8 +29,8 @@ module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
 `ifdef VGA_800_600_60 // VGA 800 x 600 @ 60 fps (40.0 MHz)
 	parameter H_ACTIVE_PIXELS = 800; // horizontal display width
 	parameter H_FRONT_PORCH   =  40; // horizontal right border
-	parameter H_SYNC_WIDTH    =  88; // horizontal sync width
-	parameter H_BACK_PORCH    = 128; // horizontal left border
+	parameter H_SYNC_WIDTH    = 128; // horizontal sync width
+	parameter H_BACK_PORCH    =  88; // horizontal left border
 	parameter H_SYNC          =   1; // 0 (-), 1 (+)
 	parameter V_ACTIVE_LINES  = 600; // vertical display height
 	parameter V_FRONT_PORCH   =   1; // vertical bottom border
