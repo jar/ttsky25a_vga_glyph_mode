@@ -1,4 +1,5 @@
-`define VGA_640_480_60
+//`define VGA_640_480_60
+`define VGA_800_600_60
 
 // Video sync generator, used to drive a VGA monitor.
 // Timing from: https://en.wikipedia.org/wiki/Video_Graphics_Array

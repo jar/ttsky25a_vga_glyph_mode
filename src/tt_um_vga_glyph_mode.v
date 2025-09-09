@@ -18,7 +18,8 @@ module tt_um_vga_glyph_mode(
 
 	// VGA signals
 	wire hsync, vsync, display_on;
-	wire [9:0] hpos, vpos;
+	wire [10:0] hpos;
+	wire [9:0] vpos;
 
 	// TinyVGA PMOD
 	assign uo_out = {hsync, RGB[0], RGB[2], RGB[4], vsync, RGB[1], RGB[3], RGB[5]};
