@@ -28,8 +28,8 @@ module tt_um_vga_glyph_mode(
 	assign uio_out = 0;
 	assign uio_oe  = 0;
 
-	wire [6:0] xb = hpos[9:3];
-	wire [6:0] x_mix = {xb[3], xb[1], xb[4], xb[1], xb[6], xb[0], xb[2]};
+	wire [7:0] xb = hpos[10:3];
+	wire [6:0] x_mix = {xb[7] ^ xb[3], xb[1], xb[4], xb[1], xb[6], xb[0], xb[2]};
 	wire [2:0] g_x = hpos[2:0];
 	wire [5:0] yb;
 	wire [3:0] _unused;

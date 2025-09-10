@@ -55,7 +55,9 @@ int main(int argc, char **argv)
 
 	// Select the VGA timings from the list
 	//constexpr vga_timing vga = vga_timings[VGA_640_480_60];
-	constexpr vga_timing vga = vga_timings[VGA_800_600_60];
+	//constexpr vga_timing vga = vga_timings[VGA_768_576_60];
+	//constexpr vga_timing vga = vga_timings[VGA_800_600_60];
+	constexpr vga_timing vga = vga_timings[VGA_1024_768_60];
 	std::array<RGB888_t, vga.horz_active_frame * vga.vert_active_frame> fb{};
 
 	// GIF output

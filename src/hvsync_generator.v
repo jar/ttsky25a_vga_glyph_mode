@@ -1,8 +1,10 @@
 //`define VGA_640_480_60
-`define VGA_800_600_60
+//`define VGA_768_576_60
+//`define VGA_800_600_60
+`define VGA_1024_768_60
 
 // Video sync generator, used to drive a VGA monitor.
-// Timing from: https://en.wikipedia.org/wiki/Video_Graphics_Array
+// Timing from: http://www.tinyvga.com/vga-timing
 // To use:
 //  - Wire the hsync and vsync signals to top level outputs
 //  - Add a 3-bit (or more) "rgb" output to the top level
@@ -14,41 +16,54 @@ module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
 	output reg hsync, vsync;
 	output display_on;
 
-`ifdef VGA_640_480_60 // VGA 640 x 480 @ 60 fps (25.175 MHz)
-	parameter H_ACTIVE_PIXELS = 640; // horizontal display width
-	parameter H_FRONT_PORCH   =  16; // horizontal right border
-	parameter H_SYNC_WIDTH    =  96; // horizontal sync width
-	parameter H_BACK_PORCH    =  48; // horizontal left border
-	parameter H_SYNC          =   0; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  = 480; // vertical display height
-	parameter V_FRONT_PORCH   =  10; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =   2; // vertical sync # lines
-	parameter V_BACK_PORCH    =  33; // vertical top border
-	parameter V_SYNC          =   0; // 0 (-), 1 (+)
+`ifdef VGA_640_480_60                 // VGA 640 x 480 @ 60 fps (25.175 MHz)
+	parameter H_ACTIVE_PIXELS =  640; // horizontal display width
+	parameter H_FRONT_PORCH   =   16; // horizontal right border
+	parameter H_SYNC_WIDTH    =   96; // horizontal sync width
+	parameter H_BACK_PORCH    =   48; // horizontal left border
+	parameter H_SYNC          =    0; // 0 (-), 1 (+)
+	parameter V_ACTIVE_LINES  =  480; // vertical display height
+	parameter V_FRONT_PORCH   =   10; // vertical bottom border
+	parameter V_SYNC_HEIGHT   =    2; // vertical sync # lines
+	parameter V_BACK_PORCH    =   33; // vertical top border
+	parameter V_SYNC          =    0; // 0 (-), 1 (+)
 `else
-`ifdef VGA_800_600_60 // VGA 800 x 600 @ 60 fps (40.0 MHz)
-	parameter H_ACTIVE_PIXELS = 800; // horizontal display width
-	parameter H_FRONT_PORCH   =  40; // horizontal right border
-	parameter H_SYNC_WIDTH    = 128; // horizontal sync width
-	parameter H_BACK_PORCH    =  88; // horizontal left border
-	parameter H_SYNC          =   1; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  = 600; // vertical display height
-	parameter V_FRONT_PORCH   =   1; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =   4; // vertical sync # lines
-	parameter V_BACK_PORCH    =  23; // vertical top border
-	parameter V_SYNC          =   1; // 0 (-), 1 (+)
+`ifdef VGA_768_576_60                 // VGA 768 x 576 @ 60 fps (34.96 MHz)
+	parameter H_ACTIVE_PIXELS =  768; // horizontal display width
+	parameter H_FRONT_PORCH   =   24; // horizontal right border
+	parameter H_SYNC_WIDTH    =   80; // horizontal sync width
+	parameter H_BACK_PORCH    =  104; // horizontal left border
+	parameter H_SYNC          =    0; // 0 (-), 1 (+)
+	parameter V_ACTIVE_LINES  =  576; // vertical display height
+	parameter V_FRONT_PORCH   =    1; // vertical bottom border
+	parameter V_SYNC_HEIGHT   =    3; // vertical sync # lines
+	parameter V_BACK_PORCH    =   17; // vertical top border
+	parameter V_SYNC          =    1; // 0 (-), 1 (+)
 `else
-`ifdef VGA_640_350_85 // VGA 640 x 350 @ 85 fps (31.5 MHz)
-	parameter H_ACTIVE_PIXELS = 640; // horizontal display width
-	parameter H_FRONT_PORCH   =  32; // horizontal right border
-	parameter H_SYNC_WIDTH    =  64; // horizontal sync width
-	parameter H_BACK_PORCH    =  96; // horizontal left border
-	parameter H_SYNC          =   1; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  = 350; // vertical display height
-	parameter V_FRONT_PORCH   =  32; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =   3; // vertical sync # lines
-	parameter V_BACK_PORCH    =  60; // vertical top border
-	parameter V_SYNC          =   0; // 0 (-), 1 (+)
+`ifdef VGA_800_600_60                 // VGA 800 x 600 @ 60 fps (40.0 MHz)
+	parameter H_ACTIVE_PIXELS =  800; // horizontal display width
+	parameter H_FRONT_PORCH   =   40; // horizontal right border
+	parameter H_SYNC_WIDTH    =  128; // horizontal sync width
+	parameter H_BACK_PORCH    =   88; // horizontal left border
+	parameter H_SYNC          =    1; // 0 (-), 1 (+)
+	parameter V_ACTIVE_LINES  =  600; // vertical display height
+	parameter V_FRONT_PORCH   =    1; // vertical bottom border
+	parameter V_SYNC_HEIGHT   =    4; // vertical sync # lines
+	parameter V_BACK_PORCH    =   23; // vertical top border
+	parameter V_SYNC          =    1; // 0 (-), 1 (+)
+`else
+`ifdef VGA_1024_768_60                // VGA 1024 x 768 @ 60 fps (65.0 MHz)
+	parameter H_ACTIVE_PIXELS = 1024; // horizontal display width
+	parameter H_FRONT_PORCH   =   24; // horizontal right border
+	parameter H_SYNC_WIDTH    =  136; // horizontal sync width
+	parameter H_BACK_PORCH    =  160; // horizontal left border
+	parameter H_SYNC          =    0; // 0 (-), 1 (+)
+	parameter V_ACTIVE_LINES  =  768; // vertical display height
+	parameter V_FRONT_PORCH   =    3; // vertical bottom border
+	parameter V_SYNC_HEIGHT   =    6; // vertical sync # lines
+	parameter V_BACK_PORCH    =   29; // vertical top border
+	parameter V_SYNC          =    0; // 0 (-), 1 (+)
+`endif
 `endif
 `endif
 `endif
