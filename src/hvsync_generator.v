@@ -22,16 +22,16 @@ module hvsync_generator(clk, reset, mode, hsync, vsync, display_on, hpos, vpos);
 	// VGA  768 x 576 @ 60 fps (34.96  MHz)
 	// VGA  800 x 600 @ 60 fps (40.0   MHz)
 	// VGA 1024 x 768 @ 60 fps (65.0   MHz)
-	parameter [10:0] H_ACTIVE_PIXELS[0:NUM_MODE-1] = '{640, 768, 800, 1024}; // horizontal display width
-	parameter  [9:0] H_FRONT_PORCH  [0:NUM_MODE-1] = '{ 16,  24,  40,   24}; // horizontal right border
-	parameter  [9:0] H_SYNC_WIDTH   [0:NUM_MODE-1] = '{ 96,  80, 128,  136}; // horizontal sync width
-	parameter  [9:0] H_BACK_PORCH   [0:NUM_MODE-1] = '{ 48, 104,  88,  160}; // horizontal left border
-	parameter  [0:0] H_SYNC         [0:NUM_MODE-1] = '{  0,   0,   1,    0}; // 0 (-), 1 (+)
-	parameter  [9:0] V_ACTIVE_LINES [0:NUM_MODE-1] = '{480, 576, 600,  768}; // vertical display height
-	parameter  [9:0] V_FRONT_PORCH  [0:NUM_MODE-1] = '{ 10,   1,   1,    3}; // vertical bottom border
-	parameter  [9:0] V_SYNC_HEIGHT  [0:NUM_MODE-1] = '{  2,   3,   4,    6}; // vertical sync # lines
-	parameter  [9:0] V_BACK_PORCH   [0:NUM_MODE-1] = '{ 33,  17,  23,   29}; // vertical top border
-	parameter  [0:0] V_SYNC         [0:NUM_MODE-1] = '{  0,   1,   1,    0}; // 0 (-), 1 (+)
+	parameter [10:0] H_ACTIVE_PIXELS[0:NUM_MODE-1] = {640, 768, 800, 1024}; // horizontal display width
+	parameter  [9:0] H_FRONT_PORCH  [0:NUM_MODE-1] = { 16,  24,  40,   24}; // horizontal right border
+	parameter  [9:0] H_SYNC_WIDTH   [0:NUM_MODE-1] = { 96,  80, 128,  136}; // horizontal sync width
+	parameter  [9:0] H_BACK_PORCH   [0:NUM_MODE-1] = { 48, 104,  88,  160}; // horizontal left border
+	parameter  [0:0] H_SYNC         [0:NUM_MODE-1] = {  0,   0,   1,    0}; // 0 (-), 1 (+)
+	parameter  [9:0] V_ACTIVE_LINES [0:NUM_MODE-1] = {480, 576, 600,  768}; // vertical display height
+	parameter  [9:0] V_FRONT_PORCH  [0:NUM_MODE-1] = { 10,   1,   1,    3}; // vertical bottom border
+	parameter  [9:0] V_SYNC_HEIGHT  [0:NUM_MODE-1] = {  2,   3,   4,    6}; // vertical sync # lines
+	parameter  [9:0] V_BACK_PORCH   [0:NUM_MODE-1] = { 33,  17,  23,   29}; // vertical top border
+	parameter  [0:0] V_SYNC         [0:NUM_MODE-1] = {  0,   1,   1,    0}; // 0 (-), 1 (+)
 
 	// derived constants
 	wire [10:0] h_sync_start = H_ACTIVE_PIXELS[mode] + H_FRONT_PORCH[mode];
