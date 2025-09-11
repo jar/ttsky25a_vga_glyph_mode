@@ -40,7 +40,7 @@ module tt_um_vga_glyph_mode(
 	wire hl;
 
 	// Suppress unused signals warning
-	wire _unused_ok = &{ena, ui_in[7:2], uio_in};
+	wire _unused_ok = &{ena, ui_in[5:2], uio_in};
 
 	reg [9:0] frame;
 	reg rst_drop;
@@ -49,7 +49,7 @@ module tt_um_vga_glyph_mode(
 	hvsync_generator hvsync_gen(
 		.clk(clk),
 		.reset(~rst_n),
-		.mode(2'd3),
+		.mode(ui_in[7:6]),
 		.hsync(hsync),
 		.vsync(vsync),
 		.display_on(display_on),

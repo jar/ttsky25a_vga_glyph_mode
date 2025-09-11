@@ -1,5 +1,5 @@
 #include <iostream>
-#include <array>
+#include <vector>
 #include <cstdint>
 #include <climits>
 
@@ -33,13 +33,20 @@ int main(int argc, char **argv)
 	bool slow = false;
 	bool gif = false;
 	int gif_frames = INT_MAX;
+	std::vector<vga_format> modes {VGA_640_480_60, VGA_768_576_60, VGA_800_600_60, VGA_1024_768_60};
+	vga_timing mode = vga_timings[modes[0]];
 
 	for (int i = 1; i < argc; i++) {
 		char* p = argv[i];
 		if (!strcmp("--fullscreen", p)) fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
 		else if (!strcmp("--polarity", p)) polarity = !polarity;
 		else if (!strcmp("--slow", p)) slow = !slow;
-		else if (!strcmp("--gif", p)) {
+		else if (!strcmp("--mode", p)) {
+			if (i + 1 < argc) {
+				int m = atoi(argv[++i]);
+				if (m >= 0 && m < modes.size()) mode = vga_timings[modes[m]];
+			}
+		} else if (!strcmp("--gif", p)) {
 			gif = !gif;
 			if (i + 1 < argc) gif_frames = atoi(argv[++i]);
 		} else {
@@ -47,18 +54,16 @@ int main(int argc, char **argv)
 			printf("  --fullscreen | [F]\tToggles SDL window size (default: %s)\n", fullscreen ? "maximized" : "minimized");
 			printf("  --polarity   | [P]\tToggles the VGA polarity sync high/low (default: %s)\n", polarity ? "true" : "false");
 			printf("  --slow       | [S]\tToggles the displayed frame rate (default: %s)\n", slow ? "true" : "false");
-			printf("  --gif [#]         \tSaves animated GIF (default: %s [%d])\n", gif ? "true" : "false", gif_frames);
+			printf("  --mode [#]        \tSets SDL VGA timing mode (value: [0:%ld])\n", modes.size()-1);
+			printf("  --gif [#frames]   \tSaves animated GIF (default: %s [%d])\n", gif ? "true" : "false", gif_frames);
 			printf("               | [Q]\tQuits/Escapes (stops GIF if enabled).\n");
 			return 0;
 		}
 	}
 
 	// Select the VGA timings from the list
-	//constexpr vga_timing vga = vga_timings[VGA_640_480_60];
-	//constexpr vga_timing vga = vga_timings[VGA_768_576_60];
-	//constexpr vga_timing vga = vga_timings[VGA_800_600_60];
-	constexpr vga_timing vga = vga_timings[VGA_1024_768_60];
-	std::array<RGB888_t, vga.horz_active_frame * vga.vert_active_frame> fb{};
+	vga_timing vga = mode;
+	std::vector<RGB888_t> fb(vga.horz_active_frame * vga.vert_active_frame);
 
 	// GIF output
 	GifWriter g;
