@@ -17,29 +17,30 @@ module hvsync_generator(clk, reset, mode, hsync, vsync, display_on, hpos, vpos);
 	output reg hsync, vsync;
 	output wire display_on;
 
-	parameter integer NUM_MODE = 4;
-	// VGA  640 x 480 @ 60 fps (25.175 MHz)
-	// VGA  768 x 576 @ 60 fps (34.96  MHz)
-	// VGA  800 x 600 @ 60 fps (40.0   MHz)
-	// VGA 1024 x 768 @ 60 fps (65.0   MHz)
-	reg [10:0] H_ACTIVE_PIXELS[0:NUM_MODE-1] = {640, 768, 800, 1024}; // horizontal display width
-	reg  [9:0] H_FRONT_PORCH  [0:NUM_MODE-1] = { 16,  24,  40,   24}; // horizontal right border
-	reg  [9:0] H_SYNC_WIDTH   [0:NUM_MODE-1] = { 96,  80, 128,  136}; // horizontal sync width
-	reg  [9:0] H_BACK_PORCH   [0:NUM_MODE-1] = { 48, 104,  88,  160}; // horizontal left border
-	reg  [0:0] H_SYNC         [0:NUM_MODE-1] = {  0,   0,   1,    0}; // 0 (-), 1 (+)
-	reg  [9:0] V_ACTIVE_LINES [0:NUM_MODE-1] = {480, 576, 600,  768}; // vertical display height
-	reg  [9:0] V_FRONT_PORCH  [0:NUM_MODE-1] = { 10,   1,   1,    3}; // vertical bottom border
-	reg  [9:0] V_SYNC_HEIGHT  [0:NUM_MODE-1] = {  2,   3,   4,    6}; // vertical sync # lines
-	reg  [9:0] V_BACK_PORCH   [0:NUM_MODE-1] = { 33,  17,  23,   29}; // vertical top border
-	reg  [0:0] V_SYNC         [0:NUM_MODE-1] = {  0,   1,   1,    0}; // 0 (-), 1 (+)
+	parameter integer NM = 4; // number of modes
+	// [0] VGA  640 x 480 @ 60 fps (25.175 MHz)
+	// [1] VGA  768 x 576 @ 60 fps (34.96  MHz)
+	// [2] VGA  800 x 600 @ 60 fps (40.0   MHz)
+	// [3] VGA 1024 x 768 @ 60 fps (65.0   MHz)
+	//--------[ Bit width ] ----- Mode------        [3]      [2]      [1]      [0]
+	parameter [(NM*11)-1:0] H_ACTIVE_PIXELS = {11'd1024, 11'd800, 11'd768, 11'd640}; // horizontal display width
+	parameter [(NM*10)-1:0] H_FRONT_PORCH   = {10'd  24, 10'd 40, 10'd 24, 10'd 16}; // horizontal right border
+	parameter [(NM*10)-1:0] H_SYNC_WIDTH    = {10'd 136, 10'd128, 10'd 80, 10'd 96}; // horizontal sync width
+	parameter [(NM*10)-1:0] H_BACK_PORCH    = {10'd 160, 10'd 88, 10'd104, 10'd 48}; // horizontal left border
+	parameter      [NM-1:0] H_SYNC          = { 1'b   0,  1'b  1,  1'b  0,  1'b  0}; // 0 (-), 1 (+)
+	parameter [(NM*10)-1:0] V_ACTIVE_LINES  = {10'd 768, 10'd600, 10'd576, 10'd480}; // vertical display height
+	parameter [(NM*10)-1:0] V_FRONT_PORCH   = {10'd   3, 10'd  1, 10'd  1, 10'd 10}; // vertical bottom border
+	parameter [(NM*10)-1:0] V_SYNC_HEIGHT   = {10'd   6, 10'd  4, 10'd  3, 10'd  2}; // vertical sync # lines
+	parameter [(NM*10)-1:0] V_BACK_PORCH    = {10'd  29, 10'd 23, 10'd 17, 10'd 33}; // vertical top border
+	parameter      [NM-1:0] V_SYNC          = { 1'b   0,  1'b  1,  1'b  1,  1'b  0}; // 0 (-), 1 (+)
 
 	// derived constants
-	wire [10:0] h_sync_start = H_ACTIVE_PIXELS[mode] + H_FRONT_PORCH[mode];
-	wire [10:0] h_sync_end   = h_sync_start + H_SYNC_WIDTH[mode] - 11'd1;
-	wire [10:0] h_max        = h_sync_end + H_BACK_PORCH[mode];
-	wire  [9:0] v_sync_start = V_ACTIVE_LINES[mode] + V_FRONT_PORCH[mode];
-	wire  [9:0] v_sync_end   = v_sync_start + V_SYNC_HEIGHT[mode] - 10'd1;
-	wire  [9:0] v_max        = v_sync_end + V_BACK_PORCH[mode];
+	wire [10:0] h_sync_start = H_ACTIVE_PIXELS[mode*11+:11] + H_FRONT_PORCH[mode*10+:10];
+	wire [10:0] h_sync_end   = h_sync_start + H_SYNC_WIDTH[mode*10+:10] - 11'd1;
+	wire [10:0] h_max        = h_sync_end + H_BACK_PORCH[mode*10+:10];
+	wire  [9:0] v_sync_start = V_ACTIVE_LINES[mode*10+:10] + V_FRONT_PORCH[mode*10+:10];
+	wire  [9:0] v_sync_end   = v_sync_start + V_SYNC_HEIGHT[mode*10+:10] - 10'd1;
+	wire  [9:0] v_max        = v_sync_end + V_BACK_PORCH[mode*10+:10];
 
 	output reg [10:0] hpos; // horizontal position counter
 	output reg  [9:0] vpos; // vertical position counter
@@ -58,6 +59,6 @@ module hvsync_generator(clk, reset, mode, hsync, vsync, display_on, hpos, vpos);
 	end
 
 	// display_on is set when beam is in "safe" visible frame
-	assign display_on = (hpos < H_ACTIVE_PIXELS[mode]) && (vpos < V_ACTIVE_LINES[mode]);
+	assign display_on = (hpos < H_ACTIVE_PIXELS[mode*11+:11]) && (vpos < V_ACTIVE_LINES[mode*10+:10]);
 
 endmodule
