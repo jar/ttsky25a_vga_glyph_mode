@@ -36,6 +36,7 @@ int main(int argc, char **argv)
 	std::vector<vga_format> modes {VGA_640_480_60, VGA_768_576_60, VGA_800_600_60, VGA_1024_768_60};
 	vga_timing mode = vga_timings[modes[0]];
 
+	// Handle command line arguments
 	for (int i = 1; i < argc; i++) {
 		char* p = argv[i];
 		if (!strcmp("--fullscreen", p)) fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -50,13 +51,13 @@ int main(int argc, char **argv)
 			gif = !gif;
 			if (i + 1 < argc) gif_frames = atoi(argv[++i]);
 		} else {
-			printf("Command Line   | [Keyboard]\n");
-			printf("  --fullscreen | [F]\tToggles SDL window size (default: %s)\n", fullscreen ? "maximized" : "minimized");
-			printf("  --polarity   | [P]\tToggles the VGA polarity sync high/low (default: %s)\n", polarity ? "true" : "false");
-			printf("  --slow       | [S]\tToggles the displayed frame rate (default: %s)\n", slow ? "true" : "false");
-			printf("  --mode [#]        \tSets SDL VGA timing mode (value: [0:%ld])\n", modes.size()-1);
-			printf("  --gif [#frames]   \tSaves animated GIF (default: %s [%d])\n", gif ? "true" : "false", gif_frames);
-			printf("               | [Q]\tQuits/Escapes (stops GIF if enabled).\n");
+			printf("Command Line     | [Key]\n");
+			printf("  --fullscreen   | [ F ]\tToggles SDL window size (default: %s)\n", fullscreen ? "maximized" : "minimized");
+			printf("  --polarity     | [ P ]\tToggles the VGA polarity sync high/low (default: %s)\n", polarity ? "true" : "false");
+			printf("  --slow         | [ S ]\tToggles the displayed frame rate (default: %s)\n", slow ? "true" : "false");
+			printf("  --mode [#]            \tSets SDL VGA timing mode (value: [0:%ld])\n", modes.size()-1);
+			printf("  --gif [#frames]       \tSaves animated GIF (default: %s [%d])\n", gif ? "true" : "false", gif_frames);
+			printf("                 | [ Q ]\tQuits/Escapes (stops GIF if enabled).\n");
 			return 0;
 		}
 	}
@@ -82,26 +83,19 @@ int main(int argc, char **argv)
 	SDL_Window* w = SDL_CreateWindow("Tiny Tapeout VGA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vga.horz_active_frame, vga.vert_active_frame, SDL_WINDOW_RESIZABLE | fullscreen);
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
 	SDL_Renderer* r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);// | SDL_RENDERER_PRESENTVSYNC);
-	if (SDL_RenderSetLogicalSize(r, vga.horz_active_frame, vga.vert_active_frame)) {
-		std::cerr << "ERROR: SDL_RenderSetLogicalSize\n";
-		exit(EXIT_FAILURE);
-	}
+	SDL_RenderSetLogicalSize(r, vga.horz_active_frame, vga.vert_active_frame);
 	SDL_SetRenderDrawColor(r, 0, 0, 0, SDL_ALPHA_OPAQUE);
-	SDL_RenderClear(r);
 	SDL_Texture* t = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, vga.horz_active_frame, vga.vert_active_frame);
 
 	// Main single frame loop
 	bool quit = false;
 	while (!quit) {
-		static int frame = 0;
 		int last_ticks = SDL_GetTicks();
-		uint8_t ui_in = 0;
-
+		static int frame = 0;
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
-			if (e.type == SDL_QUIT) {
-				quit = true;
-			} else if (e.type == SDL_KEYDOWN) {
+			if (e.type == SDL_QUIT) quit = true;
+			else if (e.type == SDL_KEYDOWN) {
 				switch (e.key.keysym.sym) {
 					case SDLK_ESCAPE:
 					case SDLK_q:
@@ -125,6 +119,7 @@ int main(int argc, char **argv)
 		auto k = SDL_GetKeyboardState(NULL);
 		auto rst_n = k[SDL_SCANCODE_R];
 		static bool rst_init = false;
+		uint8_t ui_in = 0;
 		if (!rst_init) { rst_n = rst_init = true; } // reset on first clock cycle
 		ui_in |= k[SDL_SCANCODE_0] << 0;
 		ui_in |= k[SDL_SCANCODE_1] << 1;
@@ -189,8 +184,7 @@ int main(int argc, char **argv)
 		}
 		if (gif) {
 			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
-			frame++;
-			if (frame == gif_frames) quit = true;
+			if (++frame == gif_frames) quit = true;
 		}
 		if (slow) usleep(250000); // ~4 fps
 
