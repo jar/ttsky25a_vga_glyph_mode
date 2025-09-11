@@ -9,90 +9,55 @@
 //  - Wire the hsync and vsync signals to top level outputs
 //  - Add a 3-bit (or more) "rgb" output to the top level
 
-module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
+module hvsync_generator(clk, reset, mode, hsync, vsync, display_on, hpos, vpos);
 
-	input clk;
-	input reset;
+	input wire clk;
+	input wire reset;
+	input wire [1:0] mode;
 	output reg hsync, vsync;
-	output display_on;
+	output wire display_on;
 
-`ifdef VGA_640_480_60                 // VGA 640 x 480 @ 60 fps (25.175 MHz)
-	parameter H_ACTIVE_PIXELS =  640; // horizontal display width
-	parameter H_FRONT_PORCH   =   16; // horizontal right border
-	parameter H_SYNC_WIDTH    =   96; // horizontal sync width
-	parameter H_BACK_PORCH    =   48; // horizontal left border
-	parameter H_SYNC          =    0; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  =  480; // vertical display height
-	parameter V_FRONT_PORCH   =   10; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =    2; // vertical sync # lines
-	parameter V_BACK_PORCH    =   33; // vertical top border
-	parameter V_SYNC          =    0; // 0 (-), 1 (+)
-`else
-`ifdef VGA_768_576_60                 // VGA 768 x 576 @ 60 fps (34.96 MHz)
-	parameter H_ACTIVE_PIXELS =  768; // horizontal display width
-	parameter H_FRONT_PORCH   =   24; // horizontal right border
-	parameter H_SYNC_WIDTH    =   80; // horizontal sync width
-	parameter H_BACK_PORCH    =  104; // horizontal left border
-	parameter H_SYNC          =    0; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  =  576; // vertical display height
-	parameter V_FRONT_PORCH   =    1; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =    3; // vertical sync # lines
-	parameter V_BACK_PORCH    =   17; // vertical top border
-	parameter V_SYNC          =    1; // 0 (-), 1 (+)
-`else
-`ifdef VGA_800_600_60                 // VGA 800 x 600 @ 60 fps (40.0 MHz)
-	parameter H_ACTIVE_PIXELS =  800; // horizontal display width
-	parameter H_FRONT_PORCH   =   40; // horizontal right border
-	parameter H_SYNC_WIDTH    =  128; // horizontal sync width
-	parameter H_BACK_PORCH    =   88; // horizontal left border
-	parameter H_SYNC          =    1; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  =  600; // vertical display height
-	parameter V_FRONT_PORCH   =    1; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =    4; // vertical sync # lines
-	parameter V_BACK_PORCH    =   23; // vertical top border
-	parameter V_SYNC          =    1; // 0 (-), 1 (+)
-`else
-`ifdef VGA_1024_768_60                // VGA 1024 x 768 @ 60 fps (65.0 MHz)
-	parameter H_ACTIVE_PIXELS = 1024; // horizontal display width
-	parameter H_FRONT_PORCH   =   24; // horizontal right border
-	parameter H_SYNC_WIDTH    =  136; // horizontal sync width
-	parameter H_BACK_PORCH    =  160; // horizontal left border
-	parameter H_SYNC          =    0; // 0 (-), 1 (+)
-	parameter V_ACTIVE_LINES  =  768; // vertical display height
-	parameter V_FRONT_PORCH   =    3; // vertical bottom border
-	parameter V_SYNC_HEIGHT   =    6; // vertical sync # lines
-	parameter V_BACK_PORCH    =   29; // vertical top border
-	parameter V_SYNC          =    0; // 0 (-), 1 (+)
-`endif
-`endif
-`endif
-`endif
+	parameter integer NUM_MODE = 4;
+	// VGA  640 x 480 @ 60 fps (25.175 MHz)
+	// VGA  768 x 576 @ 60 fps (34.96  MHz)
+	// VGA  800 x 600 @ 60 fps (40.0   MHz)
+	// VGA 1024 x 768 @ 60 fps (65.0   MHz)
+	parameter [10:0] H_ACTIVE_PIXELS[0:NUM_MODE-1] = '{640, 768, 800, 1024}; // horizontal display width
+	parameter  [9:0] H_FRONT_PORCH  [0:NUM_MODE-1] = '{ 16,  24,  40,   24}; // horizontal right border
+	parameter  [9:0] H_SYNC_WIDTH   [0:NUM_MODE-1] = '{ 96,  80, 128,  136}; // horizontal sync width
+	parameter  [9:0] H_BACK_PORCH   [0:NUM_MODE-1] = '{ 48, 104,  88,  160}; // horizontal left border
+	parameter  [0:0] H_SYNC         [0:NUM_MODE-1] = '{  0,   0,   1,    0}; // 0 (-), 1 (+)
+	parameter  [9:0] V_ACTIVE_LINES [0:NUM_MODE-1] = '{480, 576, 600,  768}; // vertical display height
+	parameter  [9:0] V_FRONT_PORCH  [0:NUM_MODE-1] = '{ 10,   1,   1,    3}; // vertical bottom border
+	parameter  [9:0] V_SYNC_HEIGHT  [0:NUM_MODE-1] = '{  2,   3,   4,    6}; // vertical sync # lines
+	parameter  [9:0] V_BACK_PORCH   [0:NUM_MODE-1] = '{ 33,  17,  23,   29}; // vertical top border
+	parameter  [0:0] V_SYNC         [0:NUM_MODE-1] = '{  0,   1,   1,    0}; // 0 (-), 1 (+)
 
 	// derived constants
-	localparam H_SYNC_START   = H_ACTIVE_PIXELS + H_FRONT_PORCH;
-	localparam H_SYNC_END     = H_SYNC_START + H_SYNC_WIDTH - 1;
-	localparam H_MAX          = H_SYNC_END + H_BACK_PORCH;
-	localparam V_SYNC_START   = V_ACTIVE_LINES + V_FRONT_PORCH;
-	localparam V_SYNC_END     = V_SYNC_START + V_SYNC_HEIGHT - 1;
-	localparam V_MAX          = V_SYNC_END + V_BACK_PORCH;
+	wire [10:0] h_sync_start = H_ACTIVE_PIXELS[mode] + H_FRONT_PORCH[mode];
+	wire [10:0] h_sync_end   = h_sync_start + H_SYNC_WIDTH[mode] - 11'd1;
+	wire [10:0] h_max        = h_sync_end + H_BACK_PORCH[mode];
+	wire  [9:0] v_sync_start = V_ACTIVE_LINES[mode] + V_FRONT_PORCH[mode];
+	wire  [9:0] v_sync_end   = v_sync_start + V_SYNC_HEIGHT[mode] - 10'd1;
+	wire  [9:0] v_max        = v_sync_end + V_BACK_PORCH[mode];
 
-	output reg [$clog2(H_MAX)-1:0] hpos; // horizontal position counter
-	output reg [$clog2(V_MAX)-1:0] vpos; // vertical position counter
+	output reg [10:0] hpos; // horizontal position counter
+	output reg  [9:0] vpos; // vertical position counter
 
-	wire hmaxxed = (hpos == H_MAX) || reset;	// set when hpos is maximum
-	wire vmaxxed = (vpos == V_MAX) || reset;	// set when vpos is maximum
-	wire hactive = (hpos >= H_SYNC_START) && (hpos <= H_SYNC_END);
-	wire vactive = (vpos >= V_SYNC_START) && (vpos <= V_SYNC_END);
+	wire hmaxxed = (hpos == h_max) || reset;	// set when hpos is maximum
+	wire vmaxxed = (vpos == v_max) || reset;	// set when vpos is maximum
+	wire hactive = (hpos >= h_sync_start) && (hpos <= h_sync_end);
+	wire vactive = (vpos >= v_sync_start) && (vpos <= v_sync_end);
 
 	always @(posedge clk)
 	begin
-		hsync <= hactive ^ ~H_SYNC;
+		hsync <= hactive ^ ~H_SYNC[mode];
 		hpos <= hmaxxed ? 0 : hpos + 1;
-		vsync <= vactive ^ ~V_SYNC;
+		vsync <= vactive ^ ~V_SYNC[mode];
 		vpos <= hmaxxed ? (vmaxxed ? 0 : vpos + 1) : vpos;
 	end
 
 	// display_on is set when beam is in "safe" visible frame
-	assign display_on = (hpos < H_ACTIVE_PIXELS) && (vpos < V_ACTIVE_LINES);
+	assign display_on = (hpos < H_ACTIVE_PIXELS[mode]) && (vpos < V_ACTIVE_LINES[mode]);
 
 endmodule

@@ -49,6 +49,7 @@ module tt_um_vga_glyph_mode(
 	hvsync_generator hvsync_gen(
 		.clk(clk),
 		.reset(~rst_n),
+		.mode(2'd3),
 		.hsync(hsync),
 		.vsync(vsync),
 		.display_on(display_on),
