@@ -6,7 +6,7 @@ SRC_DIR = ../src
 VERILOG_SOURCES = $(SRC_DIR)/*.v
 TOP_MODULE = tt_um_vga_glyph_mode
 
-VFLAGS = -Wall --x-assign fast --x-initial fast --noassert
+VFLAGS = -Wall -Wpedantic --default-language 1364-2005 --x-assign fast --x-initial fast --noassert
 CFLAGS = -flto -O3 -march=native -Iobj_dir -I/usr/share/verilator/include
 LDFLAGS = -flto -lSDL2
 
@@ -17,7 +17,7 @@ obj_dir/V$(TOP_MODULE).h : $(VERILOG_SOURCES) main.cpp
 	verilator $(VFLAGS) --cc $(VERILOG_SOURCES) --top-module $(TOP_MODULE) --exe main.cpp -CFLAGS "$(CFLAGS)" -LDFLAGS "$(LDFLAGS)"
 
 lint: $(VERILOG_SOURCES)
-	verilator --lint-only -Wall --default-language 1364-2005 $(VERILOG_SOURCES) --top-module $(TOP_MODULE)
+	verilator --lint-only $(VFLAGS) $(VERILOG_SOURCES) --top-module $(TOP_MODULE)
 
 sim: all
 	obj_dir/V$(TOP_MODULE)
