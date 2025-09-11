@@ -67,7 +67,6 @@ int main(int argc, char **argv)
 
 	// GIF output
 	GifWriter g;
-	int bitdepth = 6;
 	float frame_time = vga.frame_cycles() / (vga.clock_mhz * 1000.);
 	int delay = ceil(frame_time / 10.f);
 	if (!delay) delay = 1;
@@ -189,7 +188,7 @@ int main(int argc, char **argv)
 			SDL_SetWindowTitle(w, fps.c_str());
 		}
 		if (gif) {
-			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay, bitdepth);
+			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
 			frame++;
 			if (frame == gif_frames) quit = true;
 		}
