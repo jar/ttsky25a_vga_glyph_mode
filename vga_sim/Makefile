@@ -17,7 +17,7 @@ obj_dir/V$(TOP_MODULE).h : $(VERILOG_SOURCES) main.cpp
 	verilator $(VFLAGS) --cc $(VERILOG_SOURCES) --top-module $(TOP_MODULE) --exe main.cpp -CFLAGS "$(CFLAGS)" -LDFLAGS "$(LDFLAGS)"
 
 lint: $(VERILOG_SOURCES)
-	verilator --lint-only -Wall $(VERILOG_SOURCES) --top-module $(TOP_MODULE)
+	verilator --lint-only -Wall --default-language 1364-2005 $(VERILOG_SOURCES) --top-module $(TOP_MODULE)
 
 sim: all
 	obj_dir/V$(TOP_MODULE)

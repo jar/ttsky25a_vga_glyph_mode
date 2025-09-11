@@ -99,9 +99,9 @@ module tt_um_vga_glyph_mode(
 	wire drop_bit = ({3'd0, x_mix} + drop > frame) & ~rst_drop;
 	wire [5:0] glyph_color = {6{drop_bit}} ^ color;
 
-	wire [5:0] z = (&(~v[2:0]) & &(y)) ? '1 : glyph_color;
+	wire [5:0] z = (&(~v[2:0]) & &(y)) ? 6'd63 : glyph_color;
 
-	wire [5:0] RGB = (display_on & hl & ~(|f | n | drop_bit)) ? z : '0;
+	wire [5:0] RGB = (display_on & hl & ~(|f | n | drop_bit)) ? z : 6'd0;
 
 	always @(posedge vsync, negedge rst_n) begin
 		if (~rst_n) begin
