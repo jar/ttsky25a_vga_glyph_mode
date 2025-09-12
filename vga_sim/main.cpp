@@ -1,45 +1,32 @@
 #include <iostream>
 #include <vector>
 #include <cstdint>
-#include <climits>
-
 #include <SDL2/SDL.h>
-
-#include "Vtt_um_vga_glyph_mode.h"
 #include "verilated.h"
 #include "vga_timings.hpp"
 #include "gif.h"
 
-struct RGB888_t { uint8_t b, g, r, a; } __attribute__((packed));
+struct ARGB8888_t { uint8_t b, g, r, a; } __attribute__((packed));
 union VGApinout_t {
 	uint8_t pins;
 	struct { // 6-bit color with sync
-		uint8_t r1    : 1;
-		uint8_t g1    : 1;
-		uint8_t b1    : 1;
-		uint8_t vsync : 1;
-		uint8_t r0    : 1;
-		uint8_t g0    : 1;
-		uint8_t b0    : 1;
-		uint8_t hsync : 1;
+		uint8_t r1 :1; uint8_t g1 :1; uint8_t b1 :1; uint8_t vsync :1;
+		uint8_t r0 :1; uint8_t g0 :1; uint8_t b0 :1; uint8_t hsync :1;
 	} __attribute__((packed));
 };
 
 int main(int argc, char **argv)
 {
-	// Command line options
-	static Uint32 fullscreen = 0;
-	bool polarity = false;
-	bool slow = false;
-	bool gif = false;
-	int gif_frames = INT_MAX;
-	std::vector<vga_format> modes {VGA_640_480_60, VGA_768_576_60, VGA_800_600_60, VGA_1024_768_60};
+	static Uint32 fullscreen = 0; // Defaul command line options
+	bool polarity = false, slow = false, gif = false;
+	int gif_frames = 0;
+	std::vector<vga_format> modes{VGA_640_480_60, VGA_768_576_60, VGA_800_600_60, VGA_1024_768_60};
 	vga_timing mode = vga_timings[modes[0]];
 
-	// Handle command line arguments
-	for (int i = 1; i < argc; i++) {
+	for (int i = 1; i < argc; i++) { // Handle command line arguments
 		char* p = argv[i];
-		if (!strcmp("--fullscreen", p)) fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
+		if (!strcmp("--", p)) break;
+		else if (!strcmp("--fullscreen", p)) fullscreen = fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
 		else if (!strcmp("--polarity", p)) polarity = !polarity;
 		else if (!strcmp("--slow", p)) slow = !slow;
 		else if (!strcmp("--mode", p)) {
@@ -58,38 +45,29 @@ int main(int argc, char **argv)
 			printf("  --mode [#]            \tSets SDL VGA timing mode (value: [0:%ld])\n", modes.size()-1);
 			printf("  --gif [#frames]       \tSaves animated GIF (default: %s [%d])\n", gif ? "true" : "false", gif_frames);
 			printf("                 | [ Q ]\tQuits/Escapes (stops GIF if enabled).\n");
-			return 0;
+			return 1;
 		}
 	}
 
-	// Select the VGA timings from the list
-	vga_timing vga = mode;
-	std::vector<RGB888_t> fb(vga.horz_active_frame * vga.vert_active_frame);
+	vga_timing vga = mode; // Select the VGA timings from the list
+	std::vector<ARGB8888_t> fb(vga.h_active_pixels * vga.v_active_lines);
 
-	// GIF output
-	GifWriter g;
-	float frame_time = vga.frame_cycles() / (vga.clock_mhz * 1000.);
-	int delay = ceil(frame_time / 10.f);
-	if (!delay) delay = 1;
-	if (gif) {
-		printf("frame_time = %f ms (rounded up to nearest 100th second = %d)\n", frame_time, delay);
-		GifBegin(&g, "output.gif", vga.horz_active_frame, vga.vert_active_frame, delay);
-	}
+	GifWriter g; // GIF output
+	int delay = ceilf(vga.frame_cycles() / (vga.clock_mhz * 10000.f)); // 100ths of a second
+	if (gif) GifBegin(&g, "output.gif", vga.h_active_pixels, vga.v_active_lines, delay);
+
+	SDL_Init(SDL_INIT_VIDEO); // Initialize SDL2
+	SDL_Window* w = SDL_CreateWindow("Tiny Tapeout VGA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vga.h_active_pixels, vga.v_active_lines, SDL_WINDOW_RESIZABLE | fullscreen);
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+	SDL_Renderer* r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);
+	SDL_RenderSetLogicalSize(r, vga.h_active_pixels, vga.v_active_lines);
+	SDL_Texture* t = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, vga.h_active_pixels, vga.v_active_lines);
 
 	Verilated::commandArgs(argc, argv);
-	Vtt_um_vga_glyph_mode *top = new Vtt_um_vga_glyph_mode;
+	TOP_MODULE *top = new TOP_MODULE;
 
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window* w = SDL_CreateWindow("Tiny Tapeout VGA", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, vga.horz_active_frame, vga.vert_active_frame, SDL_WINDOW_RESIZABLE | fullscreen);
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
-	SDL_Renderer* r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);// | SDL_RENDERER_PRESENTVSYNC);
-	SDL_RenderSetLogicalSize(r, vga.horz_active_frame, vga.vert_active_frame);
-	SDL_SetRenderDrawColor(r, 0, 0, 0, SDL_ALPHA_OPAQUE);
-	SDL_Texture* t = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, vga.horz_active_frame, vga.vert_active_frame);
-
-	// Main single frame loop
-	bool quit = false;
-	while (!quit) {
+	bool quit = false; // Main single frame loop
+	while (!quit && !Verilated::gotFinish()) {
 		int last_ticks = SDL_GetTicks();
 		static int frame = 0;
 		SDL_Event e;
@@ -119,8 +97,8 @@ int main(int argc, char **argv)
 		auto k = SDL_GetKeyboardState(NULL);
 		auto rst_n = k[SDL_SCANCODE_R];
 		static bool rst_init = false;
-		uint8_t ui_in = 0;
 		if (!rst_init) { rst_n = rst_init = true; } // reset on first clock cycle
+		uint8_t ui_in = 0;
 		ui_in |= k[SDL_SCANCODE_0] << 0;
 		ui_in |= k[SDL_SCANCODE_1] << 1;
 		ui_in |= k[SDL_SCANCODE_2] << 2;
@@ -132,8 +110,7 @@ int main(int argc, char **argv)
 
 		static int hnum = 0;
 		static int vnum = 0;
-		// Intra-frame verilator cycles
-		for (int cycle = 0; cycle < vga.frame_cycles(); cycle++) {
+		for (int cycle = 0; cycle < vga.frame_cycles(); cycle++) { // Intra-frame verilator cycles
 			// set inputs and tick-tock
 			top->clk = 0;
 			top->eval();
@@ -147,31 +124,30 @@ int main(int argc, char **argv)
 			VGApinout_t uo_out{top->uo_out};
 
 			// h and v blank/sync logic
-			bool sync = uo_out.hsync == vga.horz_sync_pol && uo_out.vsync == vga.vert_sync_pol;
-			if (sync || (!sync && polarity)) {
-				hnum = -vga.horz_back_porch;
-				vnum = -vga.vert_back_porch;
+			if ((uo_out.hsync == vga.h_sync_pol) ^ polarity && (uo_out.vsync == vga.v_sync_pol) ^ polarity) {
+				hnum = -vga.h_back_porch;
+				vnum = -vga.v_back_porch;
 			}
 
 			// active frame, scaling for 6-bit color
-			if ((hnum >= 0) && (hnum < vga.horz_active_frame) && (vnum >= 0) && (vnum < vga.vert_active_frame)) {
+			if ((hnum >= 0) && (hnum < vga.h_active_pixels) && (vnum >= 0) && (vnum < vga.v_active_lines)) {
 				uint8_t rr = 85 * (uo_out.r1 << 1 | uo_out.r0);
 				uint8_t gg = 85 * (uo_out.g1 << 1 | uo_out.g0);
 				uint8_t bb = 85 * (uo_out.b1 << 1 | uo_out.b0);
-				RGB888_t rrggbb = { .b = bb, .g = gg, .r = rr };
-				fb[vnum * vga.horz_active_frame + hnum] = rrggbb;
+				ARGB8888_t rgb = { .b = bb, .g = gg, .r = rr };
+				fb[vnum * vga.h_active_pixels + hnum] = rgb;
 			}
 
 			// keep track of encountered fields
 			hnum++;
-			if (hnum >= vga.horz_active_frame + vga.horz_front_porch + vga.horz_sync_pulse) {
-				hnum = -vga.horz_back_porch;
+			if (hnum >= vga.h_active_pixels + vga.h_front_porch + vga.h_sync_pulse) {
+				hnum = -vga.h_back_porch;
 				vnum++;
 			}
 		}
 
 		SDL_RenderClear(r);
-		SDL_UpdateTexture(t, NULL, fb.data(), vga.horz_active_frame * sizeof(RGB888_t));
+		SDL_UpdateTexture(t, NULL, fb.data(), vga.h_active_pixels * sizeof(ARGB8888_t));
 		SDL_RenderCopy(r, t, NULL, NULL);
 		SDL_RenderPresent(r);
 
@@ -183,7 +159,7 @@ int main(int argc, char **argv)
 			SDL_SetWindowTitle(w, fps.c_str());
 		}
 		if (gif) {
-			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.horz_active_frame, vga.vert_active_frame, delay);
+			GifWriteFrame(&g, (uint8_t*)fb.data(), vga.h_active_pixels, vga.v_active_lines, delay);
 			if (++frame == gif_frames) quit = true;
 		}
 		if (slow) usleep(250000); // ~4 fps
@@ -198,6 +174,4 @@ int main(int argc, char **argv)
 	SDL_DestroyRenderer(r);
 	SDL_DestroyWindow(w);
 	SDL_Quit();
-
-	return EXIT_SUCCESS;
 }

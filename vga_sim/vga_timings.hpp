@@ -8,17 +8,17 @@
 // Packed data struct for efficient storage
 struct vga_timing {
 	float    clock_mhz;
-	uint64_t horz_active_frame : 11;
-	uint64_t horz_front_porch  :  8;
-	uint64_t horz_sync_pulse   :  8;
-	uint64_t horz_back_porch   :  9;
-	uint64_t horz_sync_pol     :  1;
-	uint64_t vert_active_frame : 11;
-	uint64_t vert_front_porch  :  6;
-	uint64_t vert_sync_pulse   :  3;
-	uint64_t vert_back_porch   :  6;
-	uint64_t vert_sync_pol     :  1;
-	uint64_t frame_cycles() const { return (horz_active_frame + horz_front_porch + horz_sync_pulse + horz_back_porch) * (vert_active_frame + vert_front_porch + vert_sync_pulse + vert_back_porch); }
+	uint64_t h_active_pixels : 11;
+	uint64_t h_front_porch   :  8;
+	uint64_t h_sync_pulse    :  8;
+	uint64_t h_back_porch    :  9;
+	uint64_t h_sync_pol      :  1;
+	uint64_t v_active_lines  : 11;
+	uint64_t v_front_porch   :  6;
+	uint64_t v_sync_pulse    :  3;
+	uint64_t v_back_porch    :  6;
+	uint64_t v_sync_pol      :  1;
+	uint64_t frame_cycles() const { return (h_active_pixels + h_front_porch + h_sync_pulse + h_back_porch) * (v_active_lines + v_front_porch + v_sync_pulse + v_back_porch); }
 } __attribute__((packed));
 
 enum vga_sync {
@@ -31,11 +31,11 @@ enum vga_format {
 	VGA_640_350_85,
 	VGA_640_400_70,
 	VGA_640_400_85,
-	VGA_720_400_85,
 	VGA_640_480_60,
 	VGA_640_480_72,
 	VGA_640_480_75,
 	VGA_640_480_85,
+	VGA_720_400_85,
     VGA_768_576_60,
     VGA_768_576_72,
     VGA_768_576_75,
@@ -68,11 +68,11 @@ constexpr std::array<vga_timing, VGA_NUM_FORMAT> vga_timings = {{
 	[  VGA_640_350_85] = { 31.500,  640,  32,  64,  96, VGA_SYNC_POS,  350, 32, 3, 60, VGA_SYNC_NEG},
 	[  VGA_640_400_70] = { 25.175,  640,  16,  96,  48, VGA_SYNC_NEG,  400, 12, 2, 34, VGA_SYNC_POS},
 	[  VGA_640_400_85] = { 31.500,  640,  32,  64,  96, VGA_SYNC_NEG,  400,  1, 3, 41, VGA_SYNC_POS},
-	[  VGA_720_400_85] = { 35.500,  720,  36,  72, 108, VGA_SYNC_NEG,  400,  1, 3, 42, VGA_SYNC_POS},
 	[  VGA_640_480_60] = { 25.175,  640,  16,  96,  48, VGA_SYNC_NEG,  480, 10, 2, 33, VGA_SYNC_NEG},
 	[  VGA_640_480_72] = { 31.500,  640,  24,  40, 128, VGA_SYNC_NEG,  480,  9, 2, 29, VGA_SYNC_POS},
 	[  VGA_640_480_75] = { 31.500,  640,  16,  64, 120, VGA_SYNC_NEG,  480,  1, 3, 16, VGA_SYNC_NEG},
 	[  VGA_640_480_85] = { 36.000,  640,  56,  56,  80, VGA_SYNC_NEG,  480,  1, 3, 25, VGA_SYNC_NEG},
+	[  VGA_720_400_85] = { 35.500,  720,  36,  72, 108, VGA_SYNC_NEG,  400,  1, 3, 42, VGA_SYNC_POS},
 	[  VGA_768_576_60] = { 34.960,  768,  24,  80, 104, VGA_SYNC_NEG,  576,  1, 3, 17, VGA_SYNC_POS},
 	[  VGA_768_576_72] = { 42.930,  768,  32,  80, 112, VGA_SYNC_NEG,  576,  1, 3, 21, VGA_SYNC_POS},
 	[  VGA_768_576_75] = { 45.510,  768,  40,  80, 120, VGA_SYNC_NEG,  576,  1, 3, 22, VGA_SYNC_POS},
