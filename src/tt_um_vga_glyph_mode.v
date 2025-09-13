@@ -6,7 +6,7 @@
 `default_nettype none
 
 (* blackbox *) (* keep *)
-module follow_the ();
+module logo ();
 endmodule
 
 module tt_um_vga_glyph_mode(
@@ -20,7 +20,7 @@ module tt_um_vga_glyph_mode(
 	input  wire       rst_n     // reset_n - low to reset
 );
 	(* keep *)
-	follow_the white_rabbit();
+	logo white_rabbit();
 
 	// VGA signals
 	wire hsync, vsync, display_on;

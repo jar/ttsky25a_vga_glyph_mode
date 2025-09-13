@@ -33,9 +33,9 @@
 
   "//": "",
   "MACROS": {
-    "follow_the": {
+    "white_rabbit": {
       "instances": {
-        "white_rabbit": {
+        "logo": {
           "location": [15, 12],
           "orientation": "N"
         }
@@ -44,9 +44,7 @@
       "lef": ["dir::../macros/white_rabbit.lef"]
     }
   },
-  "IGNORE_DISCONNECTED_MODULES": [
-    "follow_the", "white_rabbit"
-  ],
+  "IGNORE_DISCONNECTED_MODULES": ["white_rabbit", "logo"],
 
 
   "//": "Configuration docs: https://openlane.readthedocs.io/en/latest/reference/configuration.html",
