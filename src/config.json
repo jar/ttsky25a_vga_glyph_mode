@@ -31,12 +31,18 @@
   "//": "https://tinytapeout.com/faq/#how-can-i-map-an-additional-external-clock-to-one-of-the-gpios",
   "CLOCK_PORT": "clk",
 
+  "//": "obstruct our macro on the decap layer, etc",
+  "FP_PDN_VSPACING": 3,
+  "FP_PDN_VWIDTH": 3,
+  "PDN_OBSTRUCTIONS": [
+    "met4 12 45 10 15"
+  ],
   "//": "",
   "MACROS": {
     "white_rabbit_small": {
       "instances": {
         "rabbit": {
-          "location": [8, 45],
+          "location": [12, 45],
           "orientation": "N"
         }
       },
