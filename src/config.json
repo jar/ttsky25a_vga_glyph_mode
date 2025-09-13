@@ -31,6 +31,24 @@
   "//": "https://tinytapeout.com/faq/#how-can-i-map-an-additional-external-clock-to-one-of-the-gpios",
   "CLOCK_PORT": "clk",
 
+  "//": "",
+  "MACROS": {
+    "follow_the": {
+      "instances": {
+        "white_rabbit": {
+          "location": [15, 12],
+          "orientation": "N"
+        }
+      },
+      "gds": ["dir::../macros/white_rabbit.gds"],
+      "lef": ["dir::../macros/white_rabbit.lef"]
+    }
+  },
+  "IGNORE_DISCONNECTED_MODULES": [
+    "follow_the", "white_rabbit"
+  ],
+
+
   "//": "Configuration docs: https://openlane.readthedocs.io/en/latest/reference/configuration.html",
 
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",

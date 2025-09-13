@@ -5,6 +5,10 @@
 
 `default_nettype none
 
+(* blackbox *) (* keep *)
+module follow_the ();
+endmodule
+
 module tt_um_vga_glyph_mode(
 	input  wire [7:0] ui_in,    // Dedicated inputs
 	output wire [7:0] uo_out,   // Dedicated outputs
@@ -15,6 +19,8 @@ module tt_um_vga_glyph_mode(
 	input  wire       clk,      // clock
 	input  wire       rst_n     // reset_n - low to reset
 );
+	(* keep *)
+	follow_the white_rabbit();
 
 	// VGA signals
 	wire hsync, vsync, display_on;
