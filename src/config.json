@@ -33,15 +33,15 @@
 
   "//": "",
   "MACROS": {
-    "white_rabbit": {
+    "white_rabbit_small": {
       "instances": {
         "rabbit": {
-          "location": [1, 1],
+          "location": [12, 45],
           "orientation": "N"
         }
       },
-      "gds": ["dir::../macros/white_rabbit.gds"],
-      "lef": ["dir::../macros/white_rabbit.lef"]
+      "gds": ["dir::../macros/white_rabbit_small.gds"],
+      "lef": ["dir::../macros/white_rabbit_small.lef"]
     }
   },
   "IGNORE_DISCONNECTED_MODULES": ["white_rabbit", "rabbit"],
